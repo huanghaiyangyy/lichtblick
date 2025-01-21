@@ -23,6 +23,11 @@ export type InputEvents = {
     worldSpaceCursorCoords: THREE.Vector3 | undefined,
     event: MouseEvent,
   ) => void;
+  touchstart: (
+    cursorCoords: THREE.Vector2,
+    worldSpaceCursorCoords: THREE.Vector3 | undefined,
+    event: TouchEvent,
+  ) => void;
   mousedown: (
     cursorCoords: THREE.Vector2,
     worldSpaceCursorCoords: THREE.Vector3 | undefined,
@@ -181,6 +186,9 @@ export class Input extends EventEmitter<InputEvents> {
     if (touch) {
       this.#startClientPos = new THREE.Vector2(touch.clientX, touch.clientY);
     }
+
+    this.#updateTouchCoords(event);
+    this.emit("touchstart", this.#cursorCoords, this.#worldSpaceCursorCoords, event);
     event.preventDefault();
   };
 
@@ -218,7 +226,36 @@ export class Input extends EventEmitter<InputEvents> {
         this.#worldSpaceCursorCoords ?? new THREE.Vector3(),
       ) ?? undefined;
   }
+
+  #updateTouchCoords(event: TouchEvent): void {
+    const canvasRect = this.#canvas.getBoundingClientRect();
+    const touch = event.touches[0];
+
+    if(!touch){return;}
+
+    const offsetX = touch?.clientX - canvasRect.left;
+    const offsetY = touch?.clientY - canvasRect.top;
+
+    this.#cursorCoords.x = offsetX;
+    this.#cursorCoords.y = offsetY;
+
+    this.#raycaster.setFromCamera(
+      // Cursor position in NDC
+      tempVec2.set(
+        (offsetX / this.canvasSize.width) * 2 - 1,
+        -((offsetY / this.canvasSize.height) * 2 - 1),
+      ),
+      this.getCamera(),
+    );
+    this.#worldSpaceCursorCoords =
+      this.#raycaster.ray.intersectPlane(
+        XY_PLANE,
+        this.#worldSpaceCursorCoords ?? new THREE.Vector3(),
+      ) ?? undefined;
+  }
 }
+
+
 
 function innerSize(node: HTMLElement) {
   const cs = getComputedStyle(node);

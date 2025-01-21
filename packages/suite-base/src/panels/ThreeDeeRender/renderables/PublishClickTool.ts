@@ -106,6 +106,7 @@ export class PublishClickTool extends SceneExtension<Renderable, PublishClickEve
     this.#sphere.dispose();
     this.renderer.input.removeListener("click", this.#handleClick);
     this.renderer.input.removeListener("mousemove", this.#handleMouseMove);
+    this.renderer.input.removeListener("touchstart", this.#handleTouch);
   }
 
   public setPublishClickType(type: PublishClickType): void {
@@ -129,11 +130,13 @@ export class PublishClickTool extends SceneExtension<Renderable, PublishClickEve
         this.#point1 = this.#point2 = undefined;
         this.renderer.input.removeListener("click", this.#handleClick);
         this.renderer.input.removeListener("mousemove", this.#handleMouseMove);
+        this.renderer.input.removeListener("touchstart", this.#handleTouch);
         this.dispatchEvent({ type: "foxglove.publish-end" });
         break;
       case "place-first-point":
         this.renderer.input.addListener("click", this.#handleClick);
         this.renderer.input.addListener("mousemove", this.#handleMouseMove);
+        this.renderer.input.addListener("touchstart", this.#handleTouch);
         this.dispatchEvent({ type: "foxglove.publish-start" });
         break;
       case "place-second-point":
@@ -167,6 +170,55 @@ export class PublishClickTool extends SceneExtension<Renderable, PublishClickEve
     _cursorCoords: THREE.Vector2,
     worldSpaceCursorCoords: THREE.Vector3 | undefined,
     _event: MouseEvent,
+  ) => {
+    if (!worldSpaceCursorCoords) {
+      return;
+    }
+
+    switch (this.state) {
+      case "idle":
+        break;
+      case "place-first-point":
+        this.#point1 = worldSpaceCursorCoords.clone();
+        if (this.publishClickType === "point") {
+          this.dispatchEvent({
+            type: "foxglove.publish-submit",
+            publishClickType: this.publishClickType,
+            point: { x: this.#point1.x, y: this.#point1.y, z: this.#point1.z },
+          });
+          this.#setState("idle");
+        } else {
+          this.#setState("place-second-point");
+        }
+        break;
+      case "place-second-point":
+        this.#point2 = worldSpaceCursorCoords.clone();
+        if (this.#point1 && this.publishClickType !== "point") {
+          const p = this.#point1.clone();
+          const q = new THREE.Quaternion().setFromUnitVectors(
+            UNIT_X,
+            tempVec3.subVectors(this.#point2, this.#point1).normalize(),
+          );
+          this.dispatchEvent({
+            type: "foxglove.publish-submit",
+            publishClickType: this.publishClickType,
+            pose: {
+              position: { x: p.x, y: p.y, z: p.z },
+              orientation: { x: q.x, y: q.y, z: q.z, w: q.w },
+            },
+          });
+        }
+        this.#setState("idle");
+        break;
+    }
+    this.#render();
+  };
+
+
+  #handleTouch = (
+    _cursorCoords: THREE.Vector2,
+    worldSpaceCursorCoords: THREE.Vector3 | undefined,
+    _event: TouchEvent,
   ) => {
     if (!worldSpaceCursorCoords) {
       return;
