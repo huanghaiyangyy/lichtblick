@@ -663,11 +663,13 @@ export function ThreeDeeRender(props: {
     context.advertise?.(publishTopics.pose, "geometry_msgs/PoseWithCovarianceStamped", {
       datatypes,
     });
+    context.advertise?.("/control_switch", "std_msgs/Int32", { datatypes });
 
     return () => {
       context.unadvertise?.(publishTopics.goal);
       context.unadvertise?.(publishTopics.point);
       context.unadvertise?.(publishTopics.pose);
+      context.unadvertise?.("/control_switch");
     };
   }, [publishTopics, context, context.dataSourceProfile]);
 
@@ -748,6 +750,21 @@ export function ThreeDeeRender(props: {
     }
   }, [publishActive, renderer]);
 
+  const onClickStartButton = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
+      log.warn("Publishing is only supported in ros1 and ros2");
+      return;
+    }
+    const message = {
+      data: 2,
+    };
+    context.publish("/control_switch", message);
+  }, [context]);
+
   const onTogglePerspective = useCallback(() => {
     const currentState = renderer?.getCameraState()?.perspective ?? false;
     actionHandler({
@@ -802,6 +819,7 @@ export function ThreeDeeRender(props: {
             publishActive={publishActive}
             onClickPublish={onClickPublish}
             onShowTopicSettings={onShowTopicSettings}
+            onClickStartButton={onClickStartButton}
             publishClickType={renderer?.publishClickTool.publishClickType ?? "point"}
             onChangePublishClickType={(type) => {
               renderer?.publishClickTool.setPublishClickType(type);

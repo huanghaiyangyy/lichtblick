@@ -49,6 +49,7 @@ const PublishClickIcons: Record<PublishClickType, React.ReactNode> = {
   pose_estimate: <PublishPoseEstimateIcon fontSize="small" />,
 };
 
+// 在样式定义部分新增startButton样式
 const useStyles = makeStyles()((theme) => ({
   root: {
     position: "absolute",
@@ -93,6 +94,19 @@ const useStyles = makeStyles()((theme) => ({
     borderRadius: theme.shape.borderRadius,
     marginLeft: theme.spacing(1),
   },
+  startButton: {
+    position: "absolute",
+    top: 10, // 与root容器的top对齐
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 1000, // 确保在最上层
+    minWidth: 120, // 自定义宽度
+    height: 32, // 自定义高度
+    backgroundColor: tc(theme.palette.primary.main).setAlpha(0.8).toString(), // 添加透明度
+    "&:hover": {
+      backgroundColor: tc(theme.palette.primary.dark).setAlpha(0.8).toString(), // 悬停状态也保持透明度
+    },
+  },
 }));
 
 type Props = {
@@ -107,6 +121,7 @@ type Props = {
   onClickPublish: () => void;
   onShowTopicSettings: (topic: string) => void;
   onTogglePerspective: () => void;
+  onClickStartButton: () => void;
   perspective: boolean;
   publishActive: boolean;
   publishClickType: PublishClickType;
@@ -323,6 +338,15 @@ export function RendererOverlay(props: Props): React.JSX.Element {
 
   return (
     <>
+      {props.interfaceMode === "3d" && (
+        <Button
+          className={classes.startButton}
+          variant="contained"
+          onClick={props.onClickStartButton}
+        >
+          {t("StartParking" as any)}
+        </Button>
+      )}
       {props.interfaceMode === "image" && <PanelContextMenu getItems={getContextMenuItems} />}
       <div ref={mousePresenceRef} className={classes.root}>
         {
