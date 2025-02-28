@@ -122,6 +122,11 @@ type Props = {
   onShowTopicSettings: (topic: string) => void;
   onTogglePerspective: () => void;
   onClickStartButton: () => void;
+  onClickStopButton: () => void;
+  onClickFrontParkingButton: () => void;
+  onClickRearParkingButton: () => void;
+  onClickLeftParkingOutButton: () => void;
+  onClickRightParkingOutButton: () => void;
   perspective: boolean;
   publishActive: boolean;
   publishClickType: PublishClickType;
@@ -336,17 +341,201 @@ export function RendererOverlay(props: Props): React.JSX.Element {
   const mousePresenceRef = useRef<HTMLDivElement>(ReactNull);
   const mousePresent = usePanelMousePresence(mousePresenceRef);
 
+  // const [expanded, setExpanded] = useState(false);
+
+
+  const [anchorEl1, setAnchorEl1] = useState<null | HTMLElement>(null);
+  const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
+  const open1 = Boolean(anchorEl1);
+  const open2 = Boolean(anchorEl2);
+
+  const [displayText, setDisplayText] = useState(true);
+
   return (
     <>
-      {props.interfaceMode === "3d" && (
-        <Button
-          className={classes.startButton}
-          variant="contained"
-          onClick={props.onClickStartButton}
-        >
-          {t("StartParking" as any)}
-        </Button>
-      )}
+
+
+{props.interfaceMode === "3d" && (
+  <div style={{
+    position: "absolute",
+    top: 160,
+    right: 10,
+    zIndex: 1000,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    width: 60 // 新增固定容器宽度
+  }}>
+
+  <div>
+    <Button
+      variant="contained"
+      onClick={(e) => setAnchorEl1(e.currentTarget)}
+      sx={{
+        minWidth: 60, // 从120调整为80
+        width: '100%', // 新增宽度100%
+        backgroundColor: theme => tc(theme.palette.secondary.main).setAlpha(0.8).toString(),
+        "&:hover": {
+          backgroundColor: theme => tc(theme.palette.secondary.dark).setAlpha(0.8).toString()
+        }
+      }}
+    >
+      {t("泊入" as any)}
+    </Button>
+
+<Menu
+  anchorEl={anchorEl1}
+  open={open1}
+  onClose={() => setAnchorEl1(null)}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+  sx={{
+    '& .MuiPaper-root': {
+      minWidth: 60,
+      marginTop: '8px'
+    }
+  }}
+>
+  <MenuItem
+      onClick={() => {
+        props.onClickFrontParkingButton();
+        setAnchorEl1(null); // 添加关闭菜单
+      }}
+    sx={{
+      fontSize: '0.875rem',
+      padding: '6px 16px',
+      justifyContent: 'center', // 添加水平居中
+      textAlign: 'center' ,// 确保文字居中
+                  // 新增点击反馈样式
+    "&:active": {
+      backgroundColor: theme => tc(theme.palette.secondary.dark).setAlpha(0.9).toString(),
+      transform: "scale(0.98)",
+      boxShadow: theme.shadows[2]
+    },
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+    }}
+  >
+    {t("车头泊入" as any)}
+  </MenuItem>
+  <MenuItem
+      onClick={() => {
+        props.onClickRearParkingButton();
+        setAnchorEl1(null); // 添加关闭菜单
+      }}
+    sx={{
+      fontSize: '0.875rem',
+      padding: '6px 16px',
+      justifyContent: 'center', // 添加水平居中
+      textAlign: 'center', // 确保文字居中
+                  // 新增点击反馈样式
+    "&:active": {
+      backgroundColor: theme => tc(theme.palette.secondary.dark).setAlpha(0.9).toString(),
+      transform: "scale(0.98)",
+      boxShadow: theme.shadows[2]
+    },
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+    }}
+  >
+    {t("车尾泊入" as any)}
+  </MenuItem>
+
+</Menu>
+  </div>
+
+  <div>
+      <Button
+        variant="contained"
+        onClick={(e) => setAnchorEl2(e.currentTarget)}
+        sx={{
+          minWidth: 60, // 从120调整为80
+          width: '100%', // 新增宽度100%
+          backgroundColor: theme => tc(theme.palette.secondary.main).setAlpha(0.8).toString(),
+          "&:hover": {
+            backgroundColor: theme => tc(theme.palette.secondary.dark).setAlpha(0.8).toString()
+          }
+        }}
+      >
+        {t("泊出" as any)}
+      </Button>
+
+    <Menu
+      anchorEl={anchorEl2}
+      open={open2}
+      onClose={() => setAnchorEl2(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      sx={{
+        '& .MuiPaper-root': {
+          minWidth: 60,
+          marginTop: '8px'
+        }
+      }}
+    >
+      <MenuItem
+          onClick={() => {
+            props.onClickLeftParkingOutButton();
+            setAnchorEl2(null); // 添加关闭菜单
+          }}
+        sx={{
+          fontSize: '0.875rem',
+          padding: '6px 16px',
+          justifyContent: 'center',
+          textAlign: 'center',// 确保文字居中
+          // 新增点击反馈样式
+          "&:active": {
+          backgroundColor: theme => tc(theme.palette.secondary.dark).setAlpha(0.9).toString(),
+          transform: "scale(0.98)",
+          boxShadow: theme.shadows[2]
+          },
+          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+        }}
+      >
+        {t("左侧泊出" as any)}
+      </MenuItem>
+      <MenuItem
+          onClick={() => {
+            props.onClickRightParkingOutButton();
+            setAnchorEl2(null); // 添加关闭菜单
+          }}
+        sx={{
+          fontSize: '0.875rem',
+          padding: '6px 16px',
+          justifyContent: 'center',
+          textAlign: 'center',// 确保文字居中
+          // 新增点击反馈样式
+          "&:active": {
+          backgroundColor: theme => tc(theme.palette.secondary.dark).setAlpha(0.9).toString(),
+          transform: "scale(0.98)",
+          boxShadow: theme.shadows[2]
+          },
+          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+        }}
+      >
+        {t("右侧泊出" as any)}
+      </MenuItem>
+    </Menu>
+  </div>
+  <Button
+  variant="contained"
+  onClick={() => {
+    const newDisplay = !displayText;
+    setDisplayText(newDisplay);
+    newDisplay ? props.onClickStartButton ?.() : props.onClickStopButton?.();
+  }}
+  sx={{
+    minWidth: 60,
+    width: '100%',
+    backgroundColor: theme => tc(theme.palette.secondary.main).setAlpha(0.8).toString(),
+    "&:hover": {
+      backgroundColor: theme => tc(theme.palette.secondary.dark).setAlpha(0.8).toString()
+    }
+  }}
+>
+  {t(displayText ? "开始" : "停止" as any)}
+</Button>
+  </div>
+
+)}
       {props.interfaceMode === "image" && <PanelContextMenu getItems={getContextMenuItems} />}
       <div ref={mousePresenceRef} className={classes.root}>
         {
