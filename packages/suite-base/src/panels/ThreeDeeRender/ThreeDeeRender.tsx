@@ -458,7 +458,26 @@ export function ThreeDeeRender(props: {
         }
       }
     }
+    // control_debug订阅配置
+    if (topics.some((t) => t.name === "/control_debug")) {
+      newSubscriptions.push({
+        topic: "/control_debug",
+        preload: false,
+        // 使用原始消息类型（不进行convertTo）
+        convertTo: undefined,
+      });
+    }
 
+    // 新增planning_debug订阅
+    if (topics.some((t) => t.name === "/planning_debug")) {
+      newSubscriptions.push({
+        topic: "/planning_debug",
+        preload: false,
+        convertTo: undefined,
+      });
+    }
+
+    // console.log('[调试] 生成新订阅列表:', newSubscriptions); // 新增调试日志
     // Sort the list to make comparisons stable
     newSubscriptions.sort((a, b) => a.topic.localeCompare(b.topic));
     setTopicsToSubscribe((prev) => (_.isEqual(prev, newSubscriptions) ? prev : newSubscriptions));
@@ -538,14 +557,34 @@ export function ThreeDeeRender(props: {
     }
   }, [renderer, currentTime, allFrames]);
 
+  // 添加消息接收状态
+  const [receivedControlMessage, setreceivedControlMessage] = useState<unknown>();
+  const [receivedPlanMessage, setReceivedPlanMessage] = useState<unknown>();
   // Handle messages and render a frame if new messages are available
   useEffect(() => {
-    if (!renderer || !currentFrameMessages) {
-      return;
-    }
+    if (!renderer || !currentFrameMessages) return;
 
-    for (const message of currentFrameMessages) {
+    let hasControlMsg = false;
+    let hasPlanMsg = false;
+
+    currentFrameMessages.forEach((message) => {
+      if (message.topic === "/control_debug") {
+        setreceivedControlMessage(message);
+        hasControlMsg = true;
+      } else if (message.topic === "/planning_debug") {
+        // 新增处理分支
+        setReceivedPlanMessage(message);
+        hasPlanMsg = true;
+      }
       renderer.addMessageEvent(message);
+    });
+
+    if (!hasControlMsg && hasPlanMsg) {
+      console.log("当前帧无控制消息");
+    } else if (hasControlMsg && !hasPlanMsg) {
+      console.log("当前帧无规划消息");
+      // } else if (!hasControlMsg && !hasPlanMsg) {
+      //   console.log('当前帧无控制/规划消息');
     }
 
     renderRef.current.needsRender = true;
@@ -779,7 +818,7 @@ export function ThreeDeeRender(props: {
       return;
     }
     const message = {
-      data: 3,
+      data: 0,
     };
     context.publish("/control_switch", message);
   }, [context]);
@@ -794,7 +833,7 @@ export function ThreeDeeRender(props: {
       return;
     }
     const message = {
-      data: 2,
+      data: 1,
     };
     context.publish("/parking_head_in", message);
   }, [context]);
@@ -809,7 +848,7 @@ export function ThreeDeeRender(props: {
       return;
     }
     const message = {
-      data: 2,
+      data: 0,
     };
     context.publish("/parking_head_in", message);
   }, [context]);
@@ -824,7 +863,7 @@ export function ThreeDeeRender(props: {
       return;
     }
     const message = {
-      data: 2,
+      data: "VerticalLeft",
     };
     context.publish("/park_out_type", message);
   }, [context]);
@@ -839,11 +878,10 @@ export function ThreeDeeRender(props: {
       return;
     }
     const message = {
-      data: 2,
+      data: "VerticalRight",
     };
     context.publish("/park_out_type", message);
   }, [context]);
-
 
   const onTogglePerspective = useCallback(() => {
     const currentState = renderer?.getCameraState()?.perspective ?? false;
@@ -911,6 +949,9 @@ export function ThreeDeeRender(props: {
               renderer?.publishClickTool.start();
             }}
             timezone={timezone}
+            // 添加新的属性，用于显示消息
+            receivedControlMessage={receivedControlMessage}
+            receivedPlanMessage={receivedPlanMessage}
           />
         </RendererContext.Provider>
       </div>
