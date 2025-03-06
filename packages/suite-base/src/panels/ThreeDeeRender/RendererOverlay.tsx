@@ -238,13 +238,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
   }, [renderer, selectedRenderable]);
 
   const publickClickButtonRef = useRef<HTMLButtonElement>(ReactNull);
-  const [publishMenuExpanded, setPublishMenuExpanded] = useState(false);
   const selectedPublishClickIcon = PublishClickIcons[props.publishClickType];
-
-  const onLongPressPublish = useCallback(() => {
-    setPublishMenuExpanded(true);
-  }, []);
-  const longPressPublishEvent = useLongPress(onLongPressPublish);
 
   const theme = useTheme();
 
@@ -253,76 +247,28 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     props.interfaceMode === "3d" && props.canPublish && renderer?.fixedFrameId != undefined;
   const publishControls = showPublishControl && (
     <>
-      <Tooltip
-        placement="left"
-        title={props.publishActive ? "Click to cancel" : "Click to publish"}
+      <IconButton
+        className={classes.iconButton}
+        size="small"
+        color={props.publishActive ? "info" : "inherit"}
+        ref={publickClickButtonRef}
+        onClick={props.onClickPublish}
+        data-testid="publish-button"
       >
-        <IconButton
-          {...longPressPublishEvent}
-          className={classes.iconButton}
-          size="small"
-          color={props.publishActive ? "info" : "inherit"}
-          ref={publickClickButtonRef}
-          onClick={props.onClickPublish}
-          data-testid="publish-button"
-        >
-          {selectedPublishClickIcon}
-          <div
-            style={{
-              borderBottom: "6px solid currentColor",
-              borderRight: "6px solid transparent",
-              bottom: 0,
-              left: 0,
-              height: 0,
-              width: 0,
-              margin: theme.spacing(0.25),
-              position: "absolute",
-            }}
-          />
-        </IconButton>
-      </Tooltip>
-      <Menu
-        id="publish-menu"
-        anchorEl={publickClickButtonRef.current}
-        anchorOrigin={{ vertical: "top", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-        open={publishMenuExpanded}
-        onClose={() => {
-          setPublishMenuExpanded(false);
-        }}
-        MenuListProps={{ dense: true }}
-      >
-        <MenuItem
-          selected={props.publishClickType === "pose_estimate"}
-          onClick={() => {
-            props.onChangePublishClickType("pose_estimate");
-            setPublishMenuExpanded(false);
+        {selectedPublishClickIcon}
+        <div
+          style={{
+            borderBottom: "6px solid currentColor",
+            borderRight: "6px solid transparent",
+            bottom: 0,
+            left: 0,
+            height: 0,
+            width: 0,
+            margin: theme.spacing(0.25),
+            position: "absolute",
           }}
-        >
-          <ListItemIcon>{PublishClickIcons.pose_estimate}</ListItemIcon>
-          <ListItemText disableTypography>Publish pose estimate</ListItemText>
-        </MenuItem>
-        <MenuItem
-          selected={props.publishClickType === "pose"}
-          onClick={() => {
-            props.onChangePublishClickType("pose");
-            setPublishMenuExpanded(false);
-          }}
-        >
-          <ListItemIcon>{PublishClickIcons.pose}</ListItemIcon>
-          <ListItemText disableTypography>Publish pose</ListItemText>
-        </MenuItem>
-        <MenuItem
-          selected={props.publishClickType === "point"}
-          onClick={() => {
-            props.onChangePublishClickType("point");
-            setPublishMenuExpanded(false);
-          }}
-        >
-          <ListItemIcon>{PublishClickIcons.point}</ListItemIcon>
-          <ListItemText disableTypography>Publish point</ListItemText>
-        </MenuItem>
-      </Menu>
+        />
+      </IconButton>
     </>
   );
 
@@ -491,8 +437,9 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
               variant="outlined"
               onClick={(e) => setAnchorEl1(e.currentTarget)} // ✅ 点击事件存在
               sx={{
-                minWidth: 60,
+                minWidth: 72,
                 width: "100%",
+                height: 32,
                 color: "inherit",
                 border: "1px solid",
                 borderColor: (theme) =>
@@ -527,7 +474,7 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
                   setAnchorEl1(null); // 添加关闭菜单
                 }}
                 sx={{
-                  fontSize: "0.875rem",
+                  fontSize: "0.75rem",
                   padding: "6px 16px",
                   justifyContent: "center", // 添加水平居中
                   textAlign: "center", // 确保文字居中
@@ -549,7 +496,7 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
                   setAnchorEl1(null); // 添加关闭菜单
                 }}
                 sx={{
-                  fontSize: "0.875rem",
+                  fontSize: "0.75rem",
                   padding: "6px 16px",
                   justifyContent: "center", // 添加水平居中
                   textAlign: "center", // 确保文字居中
@@ -573,8 +520,9 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
               variant="outlined"
               onClick={(e) => setAnchorEl2(e.currentTarget)}
               sx={{
-                minWidth: 60,
+                minWidth: 72,
                 width: "100%",
+                height: 32,
                 color: "inherit",
                 border: "1px solid",
                 borderColor: (theme) =>
@@ -609,7 +557,7 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
                   setAnchorEl2(null); // 添加关闭菜单
                 }}
                 sx={{
-                  fontSize: "0.875rem",
+                  fontSize: "0.75rem",
                   padding: "6px 16px",
                   justifyContent: "center",
                   textAlign: "center", // 确保文字居中
@@ -631,7 +579,7 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
                   setAnchorEl2(null); // 添加关闭菜单
                 }}
                 sx={{
-                  fontSize: "0.875rem",
+                  fontSize: "0.75热门",
                   padding: "6px 16px",
                   justifyContent: "center",
                   textAlign: "center", // 确保文字居中
@@ -649,6 +597,37 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
               </MenuItem>
             </Menu>
           </div>
+          {publishControls && (
+            <div>
+              <Button
+                variant="outlined"
+                onClick={props.onClickPublish}
+                sx={{
+                  minWidth: 72,
+                  width: "100%",
+                  height: 32,
+                  color: "inherit",
+                  border: "1px solid",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark" ? "rgba(255,255,255,0.23)" : "rgba(0,0,0,0.23)",
+                  boxShadow: (theme) => theme.shadows[1], // 添加与3D按钮相同的阴影
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    boxShadow: (theme) => theme.shadows[4], // 悬停时增强阴影
+                    borderColor: "currentColor",
+                  },
+                  "&:active": {
+                    backgroundColor: (theme) =>
+                      tc(theme.palette.secondary.dark).setAlpha(0.5).toString(),
+                    transform: "scale(0.98)",
+                    boxShadow: theme.shadows[2],
+                  },
+                }}
+              >
+                {t("选车位" as any)}
+              </Button>
+            </div>
+          )}
           <Button
             variant="outlined"
             onClick={() => {
@@ -657,8 +636,9 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
               newDisplay ? props.onClickStartButton?.() : props.onClickStopButton?.();
             }}
             sx={{
-              minWidth: 40,
+              minWidth: 72,
               width: "100%",
+              height: 32,
               color: "inherit",
               border: "1px solid",
               borderColor: (theme) =>
