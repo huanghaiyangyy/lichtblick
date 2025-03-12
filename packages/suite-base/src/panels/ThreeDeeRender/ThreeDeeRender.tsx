@@ -705,6 +705,7 @@ export function ThreeDeeRender(props: {
     context.advertise?.("/control_switch", "std_msgs/Int32", { datatypes });
     context.advertise?.("/park_out_type", "std_msgs/String", { datatypes });
     context.advertise?.("/parking_head_in", "std_msgs/Int32", { datatypes });
+    context.advertise?.("/record_trace", "std_msgs/Int32", { datatypes });
 
     return () => {
       context.unadvertise?.(publishTopics.goal);
@@ -713,6 +714,7 @@ export function ThreeDeeRender(props: {
       context.unadvertise?.("/control_switch");
       context.unadvertise?.("/park_out_type");
       context.unadvertise?.("/parking_head_in");
+      context.unadvertise?.("/record_trace");
     };
   }, [publishTopics, context, context.dataSourceProfile]);
 
@@ -883,6 +885,36 @@ export function ThreeDeeRender(props: {
     context.publish("/park_out_type", message);
   }, [context]);
 
+  const onClickRecordTraceStartButton = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
+      log.warn("Publishing is only supported in ros1 and ros2");
+      return;
+    }
+    const message = {
+      data: "1",
+    };
+    context.publish("/record_trace", message);
+  }, [context]);
+
+  const onClickRecordTraceStopButton = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
+      log.warn("Publishing is only supported in ros1 and ros2");
+      return;
+    }
+    const message = {
+      data: "0",
+    };
+    context.publish("/record_trace", message);
+  }, [context]);
+
   const onTogglePerspective = useCallback(() => {
     const currentState = renderer?.getCameraState()?.perspective ?? false;
     actionHandler({
@@ -943,6 +975,8 @@ export function ThreeDeeRender(props: {
             onClickRearParkingButton={onClickRearParkingButton}
             onClickLeftParkingOutButton={onClickLeftParkingOutButton}
             onClickRightParkingOutButton={onClickRightParkingOutButton}
+            onClickRecordTraceStartButton={onClickRecordTraceStartButton}
+            onClickRecordTraceStopButton={onClickRecordTraceStopButton}
             publishClickType={renderer?.publishClickTool.publishClickType ?? "point"}
             onChangePublishClickType={(type) => {
               renderer?.publishClickTool.setPublishClickType(type);

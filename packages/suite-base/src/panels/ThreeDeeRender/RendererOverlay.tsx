@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Ruler20Filled, Ruler20Regular } from "@fluentui/react-icons";
+import { UnfoldLess, UnfoldMore, Computer } from "@mui/icons-material";
 import {
   Button,
   IconButton,
@@ -18,6 +19,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { useLongPress } from "react-use";
 import tc from "tinycolor2";
@@ -42,8 +44,6 @@ import { Stats } from "./Stats";
 import { MouseEventObject } from "./camera";
 import { PublishClickType } from "./renderables/PublishClickTool";
 import { InterfaceMode } from "./types";
-import React from "react";
-import { UnfoldLess, UnfoldMore, Computer } from "@mui/icons-material";
 
 const PublishClickIcons: Record<PublishClickType, React.ReactNode> = {
   pose: <PublishGoalIcon fontSize="small" />,
@@ -129,6 +129,8 @@ type Props = {
   onClickRearParkingButton: () => void;
   onClickLeftParkingOutButton: () => void;
   onClickRightParkingOutButton: () => void;
+  onClickRecordTraceStartButton: () => void;
+  onClickRecordTraceStopButton: () => void;
   perspective: boolean;
   publishActive: boolean;
   publishClickType: PublishClickType;
@@ -298,11 +300,14 @@ export function RendererOverlay(props: Props): React.JSX.Element {
   const open1 = Boolean(anchorEl1);
   const open2 = Boolean(anchorEl2);
 
-  const [displayText, setDisplayText] = useState(true);
+  const [displayText1, setDisplayText1] = useState(true);
+  const [displayText2, setDisplayText2] = useState(true);
 
   //消息解析
   const planMessageContent = useMemo(() => {
-    if (!props.receivedPlanMessage) return null;
+    if (!props.receivedPlanMessage) {
+      return null;
+    }
     try {
       const msg = (props.receivedPlanMessage as any)?.message ?? props.receivedPlanMessage;
       return `planning_status:  ${Number(msg.planning_status) === 0 ? "True" : "False"}
@@ -314,10 +319,12 @@ computation_time: ${safeNumberFormat(msg.computation_time, 1)}`;
   }, [props.receivedPlanMessage]);
 
   const controlMessageContent = useMemo(() => {
-    if (!props.receivedControlMessage) return null;
+    if (!props.receivedControlMessage) {
+      return null;
+    }
     try {
       const msg = (props.receivedControlMessage as any)?.message ?? props.receivedControlMessage;
-      return `control_active:   ${Number(msg.control_active) != 0 ? "False" : "True"}
+      return `control_active:   ${Number(msg.control_active) === 1 ? "True" : "False"}
 xbw_lat_status:   ${Number(msg.xbw_lat_status) > 1 ? "False" : "True"}
 xbw_lon_status:   ${Number(msg.xbw_lon_status) > 1 ? "False" : "True"}
 speed:            ${safeNumberFormat(msg.current_speed_kph, 1)} m/s
@@ -435,7 +442,9 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
           <div>
             <Button
               variant="outlined"
-              onClick={(e) => setAnchorEl1(e.currentTarget)} // ✅ 点击事件存在
+              onClick={(e) => {
+                setAnchorEl1(e.currentTarget);
+              }} // ✅ 点击事件存在
               sx={{
                 minWidth: 72,
                 width: "100%",
@@ -458,7 +467,9 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
             <Menu
               anchorEl={anchorEl1}
               open={open1}
-              onClose={() => setAnchorEl1(null)}
+              onClose={() => {
+                setAnchorEl1(null);
+              }}
               anchorOrigin={{ vertical: "top", horizontal: "left" }}
               transformOrigin={{ vertical: "bottom", horizontal: "left" }}
               sx={{
@@ -518,7 +529,9 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
           <div>
             <Button
               variant="outlined"
-              onClick={(e) => setAnchorEl2(e.currentTarget)}
+              onClick={(e) => {
+                setAnchorEl2(e.currentTarget);
+              }}
               sx={{
                 minWidth: 72,
                 width: "100%",
@@ -541,7 +554,9 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
             <Menu
               anchorEl={anchorEl2}
               open={open2}
-              onClose={() => setAnchorEl2(null)}
+              onClose={() => {
+                setAnchorEl2(null);
+              }}
               anchorOrigin={{ vertical: "top", horizontal: "left" }}
               transformOrigin={{ vertical: "bottom", horizontal: "left" }}
               sx={{
@@ -579,7 +594,7 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
                   setAnchorEl2(null); // 添加关闭菜单
                 }}
                 sx={{
-                  fontSize: "0.75热门",
+                  fontSize: "0.75rem",
                   padding: "6px 16px",
                   justifyContent: "center",
                   textAlign: "center", // 确保文字居中
@@ -631,27 +646,90 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
           <Button
             variant="outlined"
             onClick={() => {
-              const newDisplay = !displayText;
-              setDisplayText(newDisplay);
-              newDisplay ? props.onClickStartButton?.() : props.onClickStopButton?.();
+              setDisplayText1(!displayText1);
+              displayText1 ? props.onClickStartButton() : props.onClickStopButton();
             }}
             sx={{
               minWidth: 72,
               width: "100%",
               height: 32,
+              // 动态颜色设置
               color: "inherit",
+              backgroundColor: (theme) =>
+                displayText1
+                  ? tc(theme.palette.success.main).setAlpha(0.2).toString() // 绿色背景
+                  : tc(theme.palette.error.main).setAlpha(0.2).toString(), // 红色背景
               border: "1px solid",
               borderColor: (theme) =>
-                theme.palette.mode === "dark" ? "rgba(255,255,255,0.23)" : "rgba(0,0,0,0.23)",
-              boxShadow: (theme) => theme.shadows[1], // 添加与3D按钮相同的阴影
+                displayText1
+                  ? theme.palette.success.main // 绿色边框
+                  : theme.palette.error.main, // 红色边框
+              boxShadow: (theme) => theme.shadows[1],
               "&:hover": {
-                backgroundColor: "rgba(255,255,255,0.08)",
-                boxShadow: (theme) => theme.shadows[4], // 悬停时增强阴影
+                backgroundColor: (theme) =>
+                  displayText1
+                    ? tc(theme.palette.success.main).setAlpha(0.3).toString() // 悬停加深绿色
+                    : tc(theme.palette.error.main).setAlpha(0.3).toString(), // 悬停加深红色
+                boxShadow: (theme) => theme.shadows[4],
                 borderColor: "currentColor",
               },
+              // 新增点击状态样式
+              "&:active": {
+                backgroundColor: (theme) =>
+                  displayText1
+                    ? tc(theme.palette.success.dark).setAlpha(0.5).toString()
+                    : tc(theme.palette.error.dark).setAlpha(0.5).toString(),
+                transform: "scale(0.98)",
+              },
+              transition: "all 0.2s ease",
             }}
           >
-            {t(displayText ? "开始" : ("停止" as any))}
+            {t(displayText1 ? "开始泊车" : ("终止泊车" as any))}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setDisplayText2(!displayText2);
+              displayText2
+                ? props.onClickRecordTraceStartButton()
+                : props.onClickRecordTraceStopButton();
+            }}
+            sx={{
+              minWidth: 72,
+              width: "100%",
+              height: 32,
+              // 动态颜色设置
+              color: "inherit",
+              backgroundColor: (theme) =>
+                displayText2
+                  ? tc(theme.palette.success.main).setAlpha(0.2).toString() // 绿色背景
+                  : tc(theme.palette.error.main).setAlpha(0.2).toString(), // 红色背景
+              border: "1px solid",
+              borderColor: (theme) =>
+                displayText2
+                  ? theme.palette.success.main // 绿色边框
+                  : theme.palette.error.main, // 红色边框
+              boxShadow: (theme) => theme.shadows[1],
+              "&:hover": {
+                backgroundColor: (theme) =>
+                  displayText2
+                    ? tc(theme.palette.success.main).setAlpha(0.3).toString() // 悬停加深绿色
+                    : tc(theme.palette.error.main).setAlpha(0.3).toString(), // 悬停加深红色
+                boxShadow: (theme) => theme.shadows[4],
+                borderColor: "currentColor",
+              },
+              // 新增点击状态样式
+              "&:active": {
+                backgroundColor: (theme) =>
+                  displayText1
+                    ? tc(theme.palette.success.dark).setAlpha(0.5).toString()
+                    : tc(theme.palette.error.dark).setAlpha(0.5).toString(),
+                transform: "scale(0.98)",
+              },
+              transition: "all 0.2s ease",
+            }}
+          >
+            {t(displayText2 ? "开始录制" : ("停止录制" as any))}
           </Button>
         </div>
       )}

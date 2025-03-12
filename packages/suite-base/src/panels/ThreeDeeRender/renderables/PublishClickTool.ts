@@ -74,7 +74,7 @@ export class PublishClickTool extends SceneExtension<Renderable, PublishClickEve
   #sphere: RenderableSphere;
   #arrow: RenderableArrow;
 
-  public publishClickType: PublishClickType = "point";
+  public publishClickType: PublishClickType = "pose";
   public state: PublishClickState = "idle";
 
   #point1?: THREE.Vector3;
@@ -213,7 +213,6 @@ export class PublishClickTool extends SceneExtension<Renderable, PublishClickEve
     }
     this.#render();
   };
-
 
   #handleTouch = (
     _cursorCoords: THREE.Vector2,
