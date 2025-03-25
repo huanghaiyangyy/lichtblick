@@ -314,7 +314,20 @@ export function RendererOverlay(props: Props): React.JSX.Element {
       const msg = (props.receivedPlanMessage as any)?.message ?? props.receivedPlanMessage;
       return (
         <>
-          {`planning_status:  ${Number(msg.planning_status) === 0 ? "True" : "False"}\n`}
+          {`planning_status:  `}
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: Number(msg.planning_status) === 0 ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)',
+              marginRight: 1,
+              verticalAlign: 'middle'
+            }}
+          />
+          {`${Number(msg.planning_status) === 0 ? "True" : "False"}\n`}
           {`replan_reason:    ${safeNumberFormat(msg.replan_reason, 0)}\n`}
           {`computation_time: ${safeNumberFormat(msg.computation_time, 1)} s\n`}
         </>
