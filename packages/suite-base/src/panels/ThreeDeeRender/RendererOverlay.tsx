@@ -17,6 +17,8 @@ import {
   Paper,
   Tooltip,
   useTheme,
+  Slider,
+  Box
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import React from "react";
@@ -310,9 +312,13 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     }
     try {
       const msg = (props.receivedPlanMessage as any)?.message ?? props.receivedPlanMessage;
-      return `planning_status:  ${Number(msg.planning_status) === 0 ? "True" : "False"}
-replan_reason:    ${safeNumberFormat(msg.replan_reason, 0)}
-computation_time: ${safeNumberFormat(msg.computation_time, 1)}`;
+      return (
+        <>
+          {`planning_status:  ${Number(msg.planning_status) === 0 ? "True" : "False"}\n`}
+          {`replan_reason:    ${safeNumberFormat(msg.replan_reason, 0)}\n`}
+          {`computation_time: ${safeNumberFormat(msg.computation_time, 1)} s\n`}
+        </>
+      );
     } catch (error) {
       return "等待规划信号...";
     }
@@ -324,12 +330,45 @@ computation_time: ${safeNumberFormat(msg.computation_time, 1)}`;
     }
     try {
       const msg = (props.receivedControlMessage as any)?.message ?? props.receivedControlMessage;
-      return `control_active:   ${Number(msg.control_active) === 1 ? "True" : "False"}
-xbw_lat_status:   ${Number(msg.xbw_lat_status) > 1 ? "False" : "True"}
-xbw_lon_status:   ${Number(msg.xbw_lon_status) > 1 ? "False" : "True"}
-speed:            ${safeNumberFormat(msg.current_speed_kph, 1)} m/s
-gear:             ${gearMapping(msg.current_gear)}
-steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
+      return (
+        <>
+          {`control_active:   ${Number(msg.control_active) === 1 ? "True" : "False"}\n`}
+          {`xbw_lat_status:   ${Number(msg.xbw_lat_status) > 1 ? "False" : "True"}\n`}
+          {`xbw_lon_status:   ${Number(msg.xbw_lon_status) > 1 ? "False" : "True"}\n`}
+          {`speed:            ${safeNumberFormat(msg.current_speed_kph, 1)} m/s\n`}
+          {`gear:             ${gearMapping(msg.current_gear)}\n`}
+          {`text_steer:       ${safeNumberFormat(msg.current_steer_kappa, 2)}\n`}
+          {"steer:            "}
+          <Slider
+            value={Number(msg.current_steer_kappa) || 0}
+            min={-0.3}
+            max={0.3}
+            step={0.01}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(v) => `${safeNumberFormat(v, 2)}°`}
+            scale={(x) => x * 100} // 将范围转换为百分比显示（可选）
+            disabled
+            sx={{
+              width: 80,
+              display: 'inline-block',
+              verticalAlign: 'middle',
+              ml: 1,
+              '& .MuiSlider-thumb': {
+                transition: 'none',
+                width: 10,  // 滑块宽度
+                height: 10, // 滑块高度
+                backgroundColor: 'rgba(186, 110, 248, 0.8)', // 滑块颜色
+              },
+              '& .MuiSlider-rail': {
+                backgroundColor: 'rgba(58, 23, 87, 0.8)', // 未激活轨道颜色
+              },
+              '& .MuiSlider-track': {
+                backgroundColor: 'rgba(197, 126, 255, 0.8)', // 激活轨道颜色
+              },
+            }}
+          />
+        </>
+      );
     } catch (error) {
       console.error("消息解析错误:", error);
       return "等待控制信号...";
@@ -414,14 +453,16 @@ steer:            ${safeNumberFormat(msg.current_steer, 0)}`;
           >
             <div
               style={{
-                marginLeft: "0", // 移除左侧margin
+                marginLeft: "0",
                 textAlign: "left",
                 position: "relative",
-                left: "-4px", // 微调对齐位置
-              }}
-            >
-              {[controlMessageContent, planMessageContent].filter(Boolean).join("\n") ||
-                "等待信号..."}
+                left: "-4px",
+                whiteSpace: "pre"  // 添加这个属性保留换行符
+            }}
+          >
+              {[controlMessageContent, planMessageContent].filter(Boolean).map((content, index) => (
+                <div key={index}>{content}</div>
+              )) || "等待信号..."}
             </div>
           </div>
         </div>
