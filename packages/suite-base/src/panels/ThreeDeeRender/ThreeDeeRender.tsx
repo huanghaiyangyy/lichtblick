@@ -80,7 +80,7 @@ const PANEL_STYLE: React.CSSProperties = {
  * A panel that renders a 3D scene. This is a thin wrapper around a `Renderer` instance.
  */
 export function ThreeDeeRender(props: {
-  context: BuiltinPanelExtensionContext;
+  context: BuiltinPanelExtensionContext;  // 提供面板与宿主环境的交互能力：状态保存/加载，数据订阅，布局操作，资源加载
   interfaceMode: InterfaceMode;
   testOptions: TestOptions;
   /** Allow for injection or overriding of default extensions by custom extensions */
@@ -90,13 +90,13 @@ export function ThreeDeeRender(props: {
   const {
     initialState,
     saveState,
-    unstable_fetchAsset: fetchAsset,
+    unstable_fetchAsset: fetchAsset,  // 将 context 中的 unstable_fetchAsset 拿出来并重命名为 fetchAsset
     unstable_setMessagePathDropConfig: setMessagePathDropConfig,
   } = context;
-  const analytics = useAnalytics();
+  const analytics = useAnalytics(); // 一个使用 React Context 机制获取预先注入的分析工具
 
   // Load and save the persisted panel configuration
-  const [config, setConfig] = useState<Immutable<RendererConfig>>(() => {
+  const [config, setConfig] = useState<Immutable<RendererConfig>>(() => { // 这里定义了一个设置 config 的 Hook
     const partialConfig = initialState as DeepPartial<RendererConfig> | undefined;
 
     // Initialize the camera from default settings overlaid with persisted settings
@@ -133,7 +133,7 @@ export function ThreeDeeRender(props: {
   const [renderer, setRenderer] = useState<IRenderer | undefined>(undefined);
   const rendererRef = useRef<IRenderer | undefined>(undefined);
 
-  const { enqueueSnackbar } = useSnackbar();
+  const { enqueueSnackbar } = useSnackbar();  // snackbar 是一个用来显示 notification 的组件
 
   const displayTemporaryError = useCallback(
     (errorString: string) => {
@@ -143,7 +143,7 @@ export function ThreeDeeRender(props: {
   );
 
   useEffect(() => {
-    const newRenderer = canvas
+    const newRenderer = canvas  // 副作用逻辑：在组件挂载，或者更新时执行
       ? new Renderer({
           canvas,
           config: configRef.current,
@@ -160,11 +160,11 @@ export function ThreeDeeRender(props: {
       : undefined;
     setRenderer(newRenderer);
     rendererRef.current = newRenderer;
-    return () => {
+    return () => {  // 清理逻辑：在组件卸载，或者下次 effect 执行前执行
       rendererRef.current?.dispose();
       rendererRef.current = undefined;
     };
-  }, [
+  }, [  // 依赖数组，依赖数组中的变量发生变化时，useEffect 会重新执行
     canvas,
     configRef,
     config.scene.transforms?.enablePreloading,
@@ -477,6 +477,15 @@ export function ThreeDeeRender(props: {
       });
     }
 
+    // control_cmd订阅配置
+    if (topics.some((t) => t.name === "/control_cmd")) {
+      newSubscriptions.push({
+        topic: "/control_cmd",
+        preload: false,
+        convertTo: undefined,
+      });
+    }
+
     // console.log('[调试] 生成新订阅列表:', newSubscriptions); // 新增调试日志
     // Sort the list to make comparisons stable
     newSubscriptions.sort((a, b) => a.topic.localeCompare(b.topic));
@@ -560,17 +569,22 @@ export function ThreeDeeRender(props: {
   // 添加消息接收状态
   const [receivedControlMessage, setreceivedControlMessage] = useState<unknown>();
   const [receivedPlanMessage, setReceivedPlanMessage] = useState<unknown>();
+  const [receivedControlCmdMessage, setreceivedControlCmdMessage] = useState<unknown>();
   // Handle messages and render a frame if new messages are available
   useEffect(() => {
     if (!renderer || !currentFrameMessages) return;
 
     let hasControlMsg = false;
+    let hasControlCmdMsg = false;
     let hasPlanMsg = false;
 
     currentFrameMessages.forEach((message) => {
       if (message.topic === "/control_debug") {
         setreceivedControlMessage(message);
         hasControlMsg = true;
+      } else if (message.topic === "/control_cmd") {
+        setreceivedControlCmdMessage(message);
+        hasControlCmdMsg = true;
       } else if (message.topic === "/planning_debug") {
         // 新增处理分支
         setReceivedPlanMessage(message);
@@ -579,13 +593,17 @@ export function ThreeDeeRender(props: {
       renderer.addMessageEvent(message);
     });
 
-    if (!hasControlMsg && hasPlanMsg) {
-      console.log("当前帧无控制消息");
-    } else if (hasControlMsg && !hasPlanMsg) {
-      console.log("当前帧无规划消息");
-      // } else if (!hasControlMsg && !hasPlanMsg) {
-      //   console.log('当前帧无控制/规划消息');
+    let statusMessage = "当前帧状态: ";
+    const missingMessage: string[] = [];
+    if (!hasControlMsg) missingMessage.push("/control_debug");
+    if (!hasControlCmdMsg) missingMessage.push("/control_cmd");
+    if (!hasPlanMsg) missingMessage.push("/planning_debug");
+    if (missingMessage.length > 0) {
+      statusMessage += "缺少消息: " + missingMessage.join(", ");
+    } else {
+      statusMessage += "消息完整";
     }
+    console.log(statusMessage);
 
     renderRef.current.needsRender = true;
   }, [currentFrameMessages, renderer]);
@@ -801,6 +819,7 @@ export function ThreeDeeRender(props: {
       return;
     }
     if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
+      log.warn("data source type: ", context.dataSourceProfile)
       log.warn("Publishing is only supported in ros1 and ros2");
       return;
     }
@@ -986,6 +1005,7 @@ export function ThreeDeeRender(props: {
             // 添加新的属性，用于显示消息
             receivedControlMessage={receivedControlMessage}
             receivedPlanMessage={receivedPlanMessage}
+            receivedControlCmdMessage={receivedControlCmdMessage}
           />
         </RendererContext.Provider>
       </div>
