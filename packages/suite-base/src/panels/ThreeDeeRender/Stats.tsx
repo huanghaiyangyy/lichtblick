@@ -130,7 +130,7 @@ class THREEStats {
   public end = () => {
     const time = performance.now();
 
-    this.#msPanel.update(time - this.#beginTime, 1000 / 30);
+    this.#msPanel.update(time - this.#beginTime, 1000 / 15);
 
     if (time >= this.#prevTime + 1000) {
       // this.fpsPanel.update((this.frames * 1000) / (time - this.prevTime), 100);
@@ -160,6 +160,9 @@ class Panel {
   #name: string;
   #fg: string;
   #bg: string;
+  #avg = 0;
+  #recentValues: number[] = []; // Add array to track recent values
+  #maxRecentValues = 50; // Number of frames to track
 
   public constructor(name: string, fg: string, bg: string) {
     this.#name = name;
@@ -210,6 +213,15 @@ class Panel {
       GRAPH_WIDTH = 74 * PR,
       GRAPH_HEIGHT = 30 * PR;
 
+    // Update recent values array for average calculation
+    this.#recentValues.push(value);
+    if (this.#recentValues.length > this.#maxRecentValues) {
+      this.#recentValues.shift(); // Remove oldest value when we exceed 50
+    }
+
+    // Calculate average
+    this.#avg = this.#recentValues.reduce((sum, val) => sum + val, 0) / this.#recentValues.length;
+
     this.#min = Math.min(this.#min, value);
     this.#max = Math.max(this.#max, value);
 
@@ -218,7 +230,7 @@ class Panel {
     this.#context.fillRect(0, 0, WIDTH, GRAPH_Y);
     this.#context.fillStyle = this.#fg;
     this.#context.fillText(
-      `${Math.round(value)} ${this.#name} (${Math.round(this.#min)}-${Math.round(this.#max)})`,
+      `${Math.round(value)} ${this.#name} (avg:${Math.round(this.#avg)})`,
       TEXT_X,
       TEXT_Y,
     );
