@@ -553,35 +553,18 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     <>
       {/* 控制状态面板 */}
       {props.interfaceMode === "3d" && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 20,
-            left: 20,
-            backgroundColor: "rgba(0, 0, 0, 0.3)",
-            color: "#ffffff",
-            borderRadius: 6,
-            fontFamily: "monospace",
-            width: isExpanded ? 260 : 34,
-            height: isExpanded ? "auto" : 34,
-            minHeight: 38,
-            zIndex: 1000,
-            overflow: "hidden",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            display: "flex",
-            alignItems: "flex-start",
-          }}
-        >
+        <div style={{ position: "absolute", bottom: 20, left: 20, zIndex: 1000 }}>
+          {/* Fixed button container */}
           <IconButton
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
             sx={{
-              flexShrink: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.3)",
               padding: "6px",
-              margin: "3px 0 0 3px",
               color: "#ffffff",
+              borderRadius: "6px",
               "&:hover": {
                 backgroundColor: "rgba(255,255,255,0.1)",
                 transform: "scale(1.1)",
@@ -592,32 +575,42 @@ export function RendererOverlay(props: Props): React.JSX.Element {
             <Computer style={{ width: 18, height: 18 }} />
           </IconButton>
 
+          {/* Expandable panel to the right of button */}
           <div
             style={{
-              flex: 1,
-              maxHeight: isExpanded ? "500px" : 0,
+              position: "absolute",
+              bottom: 0,
+              left: 38, // Position to the right of the button
+              backgroundColor: "rgba(0, 0, 0, 0.3)",
+              color: "#ffffff",
+              borderRadius: 6,
+              fontFamily: "monospace",
+              width: isExpanded ? 260 : 0,
+              height: isExpanded ? "auto" : 0,
+              minHeight: isExpanded ? 38 : 0,
               opacity: isExpanded ? 1 : 0,
-              padding: isExpanded ? "8px 12px 12px 12px" : 0, // 统一左右padding
-              marginLeft: "4px",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               overflow: "hidden",
-              whiteSpace: "pre-wrap",
-              borderLeft: "1px solid rgba(255,255,255,0.3)",
-              width: "calc(100% - 44px)", // 计算剩余宽度
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              visibility: isExpanded ? "visible" : "hidden",
             }}
           >
             <div
               style={{
-                marginLeft: "0",
-                textAlign: "left",
-                position: "relative",
-                left: "-4px",
-                whiteSpace: "pre"  // 添加这个属性保留换行符
-            }}
-          >
-              {[controlMessageContent, controlCmdMessageContent, planMessageContent].filter(Boolean).map((content, index) => (
-                <div key={index}>{content}</div>
-              )) || "等待信号..."}
+                padding: "8px 12px",
+                whiteSpace: "pre-wrap",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  textAlign: "left",
+                  whiteSpace: "pre"
+                }}
+              >
+                {[controlMessageContent, controlCmdMessageContent, planMessageContent].filter(Boolean).map((content, index) => (
+                  <div key={index}>{content}</div>
+                )) || "等待信号..."}
+              </div>
             </div>
           </div>
         </div>
