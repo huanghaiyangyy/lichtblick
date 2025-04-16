@@ -193,7 +193,9 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
   public constructor(renderer: IRenderer, name: string = Urdfs.extensionId) {
     super(name, renderer);
 
+    // [1] "parametersChange"事件会触发 #handleParametersChange
     renderer.on("parametersChange", this.#handleParametersChange);
+    // [2] 加上 addCustomLayerAction
     renderer.addCustomLayerAction({
       layerId: LAYER_ID,
       label: i18next.t("threeDee:addURDF"),
@@ -264,7 +266,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
     const baseFallbackColorField: SettingsTreeField = {
       label: "Color",
       help: "Fallback color used in case a link does not specify any color itself",
-      input: "rgb",
+      input: "rgba",
     };
 
     // /robot_description topic entry
@@ -764,15 +766,15 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
     }
 
     log.debug(`Fetching URDF from ${url}`);
-    renderable.userData.fetching = { url, control: new AbortController() };
+    renderable.userData.fetching = { url, control: new AbortController() }; // 通过AbortController可以创建可中断的fetch请求，用户可以通过 control.abort() 取消正在进行的请求
     this.renderer
-      .fetchAsset(url, { signal: renderable.userData.fetching.control.signal })
-      .then((urdf) => {
+      .fetchAsset(url, { signal: renderable.userData.fetching.control.signal }) // 发起网络请求，返回 Promise 对象
+      .then((urdf) => {         // 请求成功回调
         log.debug(`Fetched ${urdf.data.length} byte URDF from ${url}`);
         this.renderer.settings.errors.remove(["layers", instanceId], FETCH_URDF_ERR);
         this.#loadUrdf({ instanceId, urdf: this.#textDecoder.decode(urdf.data) });
       })
-      .catch((e: unknown) => {
+      .catch((e: unknown) => {  // 请求失败回调
         const err = e as Error;
         const hasError = !err.message.startsWith("Failed to fetch");
         const errMessage = `Failed to load URDF from "${url}"${hasError ? `: ${err.message}` : ""}`;
@@ -793,14 +795,16 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
   #loadUrdf(args: { instanceId: string; urdf?: string; forceReload?: boolean }): void {
     const { instanceId, urdf } = args;
     const forceReload = args.forceReload ?? false;
+    // [2] 缓存检查
     let renderable = this.renderables.get(instanceId);
     const settings = this.#getCurrentSettings(instanceId);
     if (renderable && urdf && !forceReload && renderable.userData.urdf === urdf) {
-      renderable.userData.settings = settings;
+      renderable.userData.settings = settings;  // 仅更新设置但不重新加载
       return;
     }
 
     // Clear any previous parsed data for this instanceId
+    // [3] 清除之前的解析数据
     const transforms = this.#transformsByInstanceId.get(instanceId) ?? [];
     for (const transform of transforms) {
       this.renderer.removeTransform(transform.child, transform.parent, 0n);
@@ -809,6 +813,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
     this.#framesByInstanceId.delete(instanceId);
     this.updateSettingsTree();
 
+    // [4] 配置解析
     const isTopicOrParam = instanceId === TOPIC_NAME || instanceId === PARAM_KEY;
     const frameId = this.renderer.fixedFrameId ?? ""; // Unused
     const settingsPath = isTopicOrParam ? ["topics", instanceId] : ["layers", instanceId];
@@ -821,6 +826,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
     const label =
       (settings as Partial<LayerSettingsCustomUrdf>).label ?? DEFAULT_CUSTOM_SETTINGS.label;
 
+    // [5] label 更新
     if (label !== renderable?.userData.settings.label) {
       // Label has changed, update the config
       this.renderer.updateConfig((draft) => {
@@ -832,6 +838,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
     }
 
     // Create a UrdfRenderable if it does not already exist
+    // [6] 创建渲染对象
     if (!renderable) {
       renderable = new UrdfRenderable(instanceId, this.renderer, {
         urdf,
@@ -851,6 +858,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
       this.renderables.set(instanceId, renderable);
     }
 
+    // [7] 状态重置
     renderable.userData.urdf = urdf;
     renderable.userData.sourceType = sourceType;
     renderable.userData.topic = topic;
@@ -858,10 +866,12 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
     renderable.userData.settings = settings;
     renderable.userData.fetching = undefined;
 
+    // [8] 强制重新加载处理
     if (!urdf || forceReload) {
       renderable.removeChildren();
     }
 
+    // [9] 资源加载
     if (!urdf) {
       const path = renderable.userData.settingsPath;
       this.renderer.settings.errors.remove(path, PARSE_URDF_ERR);
@@ -897,6 +907,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
     }
 
     // Parse the URDF
+    // [10] 解析URDF
     const loadedRenderable = renderable;
     parseUrdf(urdf, async (uri) => await this.#getFileFetch(uri, baseUrl), framePrefix)
       .then((parsed) => {
@@ -920,6 +931,8 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
       });
   }
 
+  // 优化技术，防止短时间内多次重复调用：当连续多次调用 #debouncedLoadUrdf 时，实际只会执行一次 #loadUrdf
+  // 在最后一次调用后等待 500ms 才会真正执行
   #debouncedLoadUrdf = _.debounce(this.#loadUrdf.bind(this), 500);
 
   #loadRobot(
@@ -1072,7 +1085,9 @@ function createRenderable(args: {
   const name = `${frameId}-${id}-${visual.geometry.geometryType}`;
   const orientation = eulerToQuaternion(visual.origin.rpy);
   const pose = { position: visual.origin.xyz, orientation };
+  console.warn("fallbackColor: ", fallbackColor);
   const color = getColor(visual, robot) ?? fallbackColor ?? DEFAULT_COLOR;
+  console.warn("color: ", color);
   const type = visual.geometry.geometryType;
   switch (type) {
     case "box": {
@@ -1093,9 +1108,13 @@ function createRenderable(args: {
       return new RenderableSphere(name, marker, undefined, renderer);
     }
     case "mesh": {
+      console.warn("It's mesh.");
       const isCollada = visual.geometry.filename.toLowerCase().endsWith(".dae");
       // Use embedded materials if the mesh is a Collada file
-      const embedded = isCollada ? EmbeddedMaterialUsage.Use : EmbeddedMaterialUsage.Ignore;
+      // const embedded = isCollada ? EmbeddedMaterialUsage.Use : EmbeddedMaterialUsage.Ignore;
+      // 现在默认不使用 EmbeddedMaterialUsage
+      const embedded = EmbeddedMaterialUsage.Ignore;
+      console.warn("embedded: ", embedded);
       const marker = createMeshMarker(frameId, pose, embedded, visual.geometry, baseUrl, color);
       return new RenderableMeshResource(name, marker, undefined, renderer, {
         referenceUrl: baseUrl,
@@ -1108,12 +1127,15 @@ function createRenderable(args: {
 
 function getColor(visual: UrdfVisual, robot: UrdfRobot): ColorRGBA | undefined {
   if (!visual.material) {
+    console.warn(`No material found for visual ${visual.name}`);
     return undefined;
   }
   if (visual.material.color) {
+    console.warn("material color: ", visual.material.color);
     return visual.material.color;
   }
   if (visual.material.name) {
+    console.warn("material name: ", visual.material.name);
     return robot.materials.get(visual.material.name)?.color;
   }
   return undefined;
