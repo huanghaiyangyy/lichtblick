@@ -111,7 +111,7 @@ export class RenderableMeshResource extends RenderableMarker {
   }
 
   #updateOutlineVisibility(): void {
-    const showOutlines = this.getSettings()?.showOutlines ?? true;
+    const showOutlines = this.getSettings()?.showOutlines ?? false;
     this.traverse((lineSegments) => {
       // Want to avoid picking up the LineSegments from the model itself
       // only update line segments that we've added with the special name
