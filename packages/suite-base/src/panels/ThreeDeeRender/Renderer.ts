@@ -112,8 +112,8 @@ const LIGHT_BACKDROP = new THREE.Color(palette.light.background?.default);
 const DARK_BACKDROP = new THREE.Color(palette.dark.background?.default);
 
 // Define rendering layers for multipass rendering used for the selection effect
-const LAYER_DEFAULT = 0;
-const LAYER_SELECTED = 1;
+const LAYER_DEFAULT = 0;  // 常规对象的渲染层
+const LAYER_SELECTED = 1; // 被选中对象的渲染层
 
 const FOLLOW_TF_PATH = ["general", "followTf"];
 const NO_FRAME_SELECTED = "NO_FRAME_SELECTED";
@@ -246,6 +246,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   /** Options passed for local testing and storybook. */
   public readonly testOptions: TestOptions;
   public analytics?: IAnalytics;
+  #isLowPerformance: boolean;
 
   public constructor(args: {
     canvas: HTMLCanvasElement;
@@ -259,8 +260,11 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     super();
     this.displayTemporaryError = args.displayTemporaryError;
     // NOTE: Global side effect
-    THREE.Object3D.DEFAULT_UP = new THREE.Vector3(0, 0, 1);
+    // 1. 坐标系全局设置
+    THREE.Object3D.DEFAULT_UP = new THREE.Vector3(0, 0, 1); // 设置Z轴为默认上方向
 
+    // 2. 相关变量初始化
+    /**设置对应的模式，包括 "3d" 和 "image" 两种模式 */
     const interfaceMode = (this.interfaceMode = args.interfaceMode);
     const canvas = (this.#canvas = args.canvas);
     const config = (this.config = args.config);
@@ -278,10 +282,14 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     this.settings.setNodesForKey(RENDERER_ID, []);
     this.updateCustomLayersCount();
 
+    this.#isLowPerformance = true;
+    if (this.#isLowPerformance) {
+      this.maxLod = DetailLevel.Low;
+    }
     this.gl = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
-      antialias: true,
+      antialias: this.#isLowPerformance ? false : true,
     });
     if (!this.gl.capabilities.isWebGL2) {
       throw new Error("WebGL2 is not supported");
@@ -311,13 +319,19 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
 
     this.#scene = new THREE.Scene();
 
+    // 3. 场景光照系统设置
     this.#dirLight = new THREE.DirectionalLight(0xffffff, Math.PI);
     this.#dirLight.position.set(1, 1, 1);
     this.#dirLight.castShadow = true;
     this.#dirLight.layers.enableAll();
 
-    this.#dirLight.shadow.mapSize.width = 2048;
-    this.#dirLight.shadow.mapSize.height = 2048;
+    if (this.#isLowPerformance){
+      this.#dirLight.shadow.mapSize.width = 1024;
+      this.#dirLight.shadow.mapSize.height = 1024;
+    } else {
+      this.#dirLight.shadow.mapSize.width = 2048;
+      this.#dirLight.shadow.mapSize.height = 2048;
+    }
     this.#dirLight.shadow.camera.near = 0.5;
     this.#dirLight.shadow.camera.far = 500;
     this.#dirLight.shadow.bias = -0.00001;
@@ -328,6 +342,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     this.#scene.add(this.#dirLight);
     this.#scene.add(this.#hemiLight);
 
+    // 4. 输入处理系统
     this.input = new Input(canvas, () => this.cameraHandler.getActiveCamera());
     this.input.on("resize", (size) => {
       this.#resizeHandler(size);
@@ -336,6 +351,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
       this.#clickHandler(cursorCoords);
     });
 
+    // 5. 核心功能模块装配
     this.#picker = new Picker(this.gl, this.#scene);
 
     this.#selectionBackdrop = new ScreenOverlay(this);
@@ -353,6 +369,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     this.#addSceneExtension(this.measurementTool);
     this.#addSceneExtension(this.publishClickTool);
 
+    // 6. 相机系统配置
     const aspect = renderSize.width / renderSize.height;
     switch (interfaceMode) {
       case "image": {
@@ -372,6 +389,8 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
       }
     }
 
+    // 7. 场景扩展加载
+    // 加入其他的可渲染的对象
     const { extensionsById } = args.sceneExtensionConfig;
     for (const extensionItem of Object.values(extensionsById)) {
       if (
@@ -398,6 +417,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     this.#watchDevicePixelRatio();
 
     this.setCameraState(config.cameraState);
+    // 8. 触发首帧渲染，启动渲染循环
     this.animationFrame();
   }
 
@@ -784,6 +804,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     }
   };
 
+  // 增加 CustomLayer 相关的方法
   public addCustomLayerAction(options: {
     layerId: string;
     label: string;
@@ -1151,21 +1172,24 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     uri: string,
     options?: { signal?: AbortSignal; baseUrl?: string },
   ): Promise<Asset> {
+    log.warn("trying to fetch asset from url: ", uri);
     return await this.#fetchAsset(uri, options);
   }
 
+  // 对每一帧进行处理的地方，包括渲染
   #frameHandler = (currentTime: bigint): void => {
     this.#rendering = true;
     this.currentTime = currentTime;
-    this.#handleSubscriptionQueues();
-    this.#updateFrameErrors();
-    this.#updateFixedFrameId();
+    this.#handleSubscriptionQueues(); // 处理所有的订阅消息
+    this.#updateFrameErrors();  // 处理错误
+    this.#updateFixedFrameId(); // 更新当前跟踪坐标系的根坐标系
     this.#updateResolution();
 
     this.gl.clear();
     this.emit("startFrame", currentTime, this);
 
     const camera = this.cameraHandler.getActiveCamera();
+    // 先渲染默认层（常规对象）
     camera.layers.set(LAYER_DEFAULT);
 
     // use the FALLBACK_FRAME_ID if renderFrame is undefined and there are no options for transforms
@@ -1179,8 +1203,10 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
       sceneExtension.startFrame(currentTime, renderFrameId, fixedFrameId);
     }
 
+    // 实际进行渲染的地方
     this.gl.render(this.#scene, camera);
 
+    // 再渲染被选中的对象
     if (this.#selectedRenderable) {
       this.gl.render(this.#selectionBackdropScene, camera);
       this.gl.clearDepth();
@@ -1223,6 +1249,10 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     }
   }
 
+  /**
+   * FixedFrame 指的是当前跟踪坐标系(followFrame)的根坐标系，这里要做的是更新 FixedFrame
+   * @returns
+   */
   #updateFixedFrameId(): void {
     const frame =
       this.followFrameId != undefined ? this.transformTree.frame(this.followFrameId) : undefined;
@@ -1542,12 +1572,16 @@ function queueMessage(
 ): void {
   if (subscriptions) {
     for (const subscription of subscriptions) {
+      // 如果原来有队列，就沿用原来的，在后面加入新消息；如果没有就初始化
       subscription.queue = subscription.queue ?? [];
       subscription.queue.push(messageEvent);
     }
   }
 }
 
+/**
+ * 选中物体，将物体及其子物体移动到选中层，在渲染时会有不同的渲染效果
+ */
 function selectObject(object: THREE.Object3D) {
   object.layers.set(LAYER_SELECTED);
   object.traverse((child) => {
@@ -1555,6 +1589,9 @@ function selectObject(object: THREE.Object3D) {
   });
 }
 
+/**
+ * 取消选中物体，将物体及其子物体移动到默认层
+ */
 function deselectObject(object: THREE.Object3D) {
   object.layers.set(LAYER_DEFAULT);
   object.traverse((child) => {
@@ -1567,6 +1604,8 @@ function deselectObject(object: THREE.Object3D) {
  * This dictates the order in which groups appear in the settings editor.
  */
 function baseSettingsTree(interfaceMode: InterfaceMode): SettingsTreeNodes {
+  // 根据不同的模式，加入不同的设置项，放在一个 keys 数组中，最后根据这个数组生成一个对象
+  // 这个对象就是 settings tree 的骨架
   const keys: string[] = [];
   keys.push(interfaceMode === "image" ? "imageMode" : "general", "scene");
   if (interfaceMode === "image") {

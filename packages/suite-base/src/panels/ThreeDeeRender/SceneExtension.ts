@@ -200,15 +200,16 @@ export class SceneExtension<
    *   frame.
    */
   public startFrame(
-    currentTime: bigint,
-    renderFrameId: AnyFrameId,
-    fixedFrameId: AnyFrameId,
+    currentTime: bigint,        // 当前渲染时间
+    renderFrameId: AnyFrameId,  // 相机所在坐标系 (通常来自 followFrame)
+    fixedFrameId: AnyFrameId,   // 场景根坐标系
   ): void {
     for (const renderable of this.renderables.values()) {
       const path = renderable.userData.settingsPath;
 
       // Update the THREE.Object3D.visible flag from the user settings visible toggle. If this
       // renderable is not visible, clear any layer errors and skip its per-frame update logic
+      // [1] 渲染对象可见性的控制
       renderable.visible = renderable.userData.settings.visible;
       if (!renderable.visible) {
         this.renderer.settings.errors.clearPath(path);
@@ -227,18 +228,21 @@ export class SceneExtension<
       // at `currentTime` and then to the render frame at `currentTime`. This transformation is
       // done using transform interpolation, so as new transform messages are received the results
       // of this interpolation can change from frame to frame
+      // [2] 时间源的选择
       const frameLocked = renderable.userData.settings.frameLocked ?? true;
       const srcTime = frameLocked ? currentTime : renderable.userData.messageTime;
+      // [3] 坐标系变换计算
       const frameId = renderable.userData.frameId;
       const updated = updatePose(
         renderable,
         this.renderer.transformTree,
-        renderFrameId,
-        fixedFrameId,
-        frameId,
-        currentTime,
-        srcTime,
+        renderFrameId,  // 相机坐标系（目标坐标系）
+        fixedFrameId,   // 场景根坐标系（中间转换坐标系）
+        frameId,        // 渲染对象坐标系（源坐标系）
+        currentTime,    // 目标时间
+        srcTime,        // 源时间
       );
+      // [4] 处理变换失败的情况
       if (!updated) {
         const message = missingTransformMessage(renderFrameId, fixedFrameId, frameId);
         this.renderer.settings.errors.add(path, MISSING_TRANSFORM, message);
