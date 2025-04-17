@@ -91,7 +91,7 @@ export type LayerSettingsUrdf = BaseSettings & {
 
 export type LayerSettingsCustomUrdf = CustomLayerSettings & {
   layerId: "foxglove.Urdf";
-  sourceType: "url" | "filePath" | "param" | "topic";
+  sourceType: "url" | "filePath" | "param" | "topic" | "defaultModel";
   url?: string;
   filePath?: string;
   parameter?: string;
@@ -99,6 +99,7 @@ export type LayerSettingsCustomUrdf = CustomLayerSettings & {
   framePrefix: string;
   displayMode: "auto" | "visual" | "collision";
   fallbackColor?: string;
+  defaultModel?: "none" | "lexus";
 };
 
 const DEFAULT_SETTINGS: LayerSettingsUrdf = {
@@ -124,6 +125,7 @@ const DEFAULT_CUSTOM_SETTINGS: LayerSettingsCustomUrdf = {
   framePrefix: "",
   displayMode: "auto",
   fallbackColor: DEFAULT_COLOR_STR,
+  defaultModel: "none",
 };
 const URDF_TOPIC_SCHEMAS = new Set<string>(["std_msgs/String", "std_msgs/msg/String"]);
 
@@ -361,6 +363,10 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
                 label: "Topic",
                 value: "topic",
               },
+              {
+                label: "DefaultModel",
+                value: "defaultModel",
+              },
             ],
           },
           url:
@@ -403,6 +409,24 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
                   items: filterMap(this.renderer.parameters ?? [], ([paramName, value]) =>
                     typeof value === "string" ? paramName : undefined,
                   ),
+                }
+              : undefined,
+          defaultModel:
+            config.sourceType === "defaultModel"
+              ? {
+                  label: "Default model",
+                  input: "select",
+                  value: config.defaultModel ?? DEFAULT_CUSTOM_SETTINGS.defaultModel,
+                  options: [
+                    {
+                      label: "None",
+                      value: "none",
+                    },
+                    {
+                      label: "Lexus",
+                      value: "lexus",
+                    }
+                  ],
                 }
               : undefined,
           label: {
@@ -648,11 +672,77 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
       } else if (field === "topic") {
         urdf = this.#urdfsByTopic.get(action.payload.value as string);
         this.#loadUrdf({ instanceId, urdf });
+      } else if (field == "defaultModel"){
+        const modelName = action.payload.value as LayerSettingsCustomUrdf["defaultModel"];
+        if (modelName === "none" || modelName === undefined) {
+          if (this.#clearUrdfModel(instanceId)) {
+            return; // Skip the fetchDefaultModel call if model was cleared
+          }
+        }
+        else{
+          this.#fetchDefaultModel(instanceId, modelName);
+        }
       } else {
         this.#loadUrdf({ instanceId, urdf });
       }
     }
   };
+
+  /**
+   * 获取默认urdf模型
+   * @param instanceId - 实例ID
+   * @param modelName - 模型名称
+   */
+  #fetchDefaultModel(instanceId: string, modelName: string | undefined): void {
+    if (!modelName) {
+      return undefined;
+    }
+
+    const baseUrl = window.location.origin;
+    const modelPaths: Record<string, string> = {
+      lexus: `${baseUrl}/models/lexus/lexus.urdf`,
+    }
+
+    const modelPath = modelPaths[modelName];
+    if (!modelPath) {
+      return undefined;
+    }
+
+    this.#fetchUrdf(instanceId, modelPath);
+  }
+
+  /**
+   * 把URDF模型从场景中移除，并清理所有相关资源
+   * @param instanceId - 要清除的实例ID
+   * @returns 如果成功清除模型，则返回true；否则返回false
+   */
+  #clearUrdfModel(instanceId: string): boolean {
+    const renderable = this.renderables.get(instanceId);
+    if (!renderable) {
+      return false;
+    }
+
+    // Clear transforms from transform tree
+    const transforms = this.#transformsByInstanceId.get(instanceId) ?? [];
+    for (const transform of transforms) {
+      this.renderer.removeTransform(transform.child, transform.parent, 0n);
+    }
+
+    // Remove from internal tracking maps
+    this.#transformsByInstanceId.delete(instanceId);
+    this.#framesByInstanceId.delete(instanceId);
+
+    // Clear the visual components
+    renderable.removeChildren();
+
+    // Update renderable data
+    renderable.userData.urdf = undefined;
+
+    // Update the UI
+    this.updateSettingsTree();
+
+    return true;
+  }
 
   #handleRobotDescription = (messageEvent: PartialMessageEvent<{ data: string }>): void => {
     const topic = messageEvent.topic;
@@ -904,6 +994,9 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
       baseUrl = url;
     } else if (sourceType === "filePath") {
       baseUrl = `file://${filePath}`;
+    } else if (sourceType === "defaultModel") {
+      const modelName = (settings as Partial<LayerSettingsCustomUrdf>).defaultModel;
+      baseUrl = `${window.location.origin}/models/${modelName}/`;
     }
 
     // Parse the URDF
@@ -1108,13 +1201,11 @@ function createRenderable(args: {
       return new RenderableSphere(name, marker, undefined, renderer);
     }
     case "mesh": {
-      console.warn("It's mesh.");
       const isCollada = visual.geometry.filename.toLowerCase().endsWith(".dae");
       // Use embedded materials if the mesh is a Collada file
       // const embedded = isCollada ? EmbeddedMaterialUsage.Use : EmbeddedMaterialUsage.Ignore;
       // 现在默认不使用 EmbeddedMaterialUsage
       const embedded = EmbeddedMaterialUsage.Ignore;
-      console.warn("embedded: ", embedded);
       const marker = createMeshMarker(frameId, pose, embedded, visual.geometry, baseUrl, color);
       return new RenderableMeshResource(name, marker, undefined, renderer, {
         referenceUrl: baseUrl,

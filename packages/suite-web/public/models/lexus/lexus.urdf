@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="car">
+  <link name="ego_vehicle">
+    <visual name="base_visual">
+      <origin xyz="1.3 0.0 0.0" rpy="0 0 3.14159" />
+      <geometry>
+        <mesh filename="meshes/lexus_new.dae" scale="0.9 0.9 0.9"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

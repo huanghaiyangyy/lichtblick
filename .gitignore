@@ -24,6 +24,3 @@ coverage/
 .sonar_lock
 .scannerwork
 eslint-report.json
-
-public
-static
