@@ -22,6 +22,7 @@ import { PublishSettings } from "@lichtblick/suite-base/panels/ThreeDeeRender/re
 import { FoxgloveSceneEntities } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/SceneEntities";
 import { SceneSettings } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/SceneSettings";
 import { Urdfs } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/Urdfs";
+import { Gltfs } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/Gltfs";
 import { VelodyneScans } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/VelodyneScans";
 
 import { IRenderer } from "./IRenderer";
@@ -113,6 +114,9 @@ export const DEFAULT_SCENE_EXTENSION_CONFIG: SceneExtensionConfig = {
     },
     [Urdfs.extensionId]: {
       init: (renderer: IRenderer) => new Urdfs(renderer),
+    },
+    [Gltfs.extensionId]: {
+      init: (renderer: IRenderer) => new Gltfs(renderer),
     },
     [VelodyneScans.extensionId]: {
       init: (renderer: IRenderer) => new VelodyneScans(renderer),

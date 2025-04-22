@@ -89,6 +89,7 @@ export type LayerSettingsUrdf = BaseSettings & {
   fallbackColor?: string;
 };
 
+// 侧边栏中 Custom layers 中 URDF 的设置条目
 export type LayerSettingsCustomUrdf = CustomLayerSettings & {
   layerId: "foxglove.Urdf";
   sourceType: "url" | "filePath" | "param" | "topic" | "defaultModel";
@@ -157,6 +158,10 @@ type TransformData = {
   joint: UrdfJoint;
 };
 
+/**
+ * Parses the URDF data and returns the robot model and transforms.
+ * frames 是其中坐标系的名称
+ */
 type ParsedUrdf = {
   robot: UrdfRobot;
   frames: string[];
@@ -454,7 +459,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
         entries.push({
           path: ["layers", instanceId],
           node: {
-            label: config.label ?? "Grid",
+            label: config.label ?? "URDF",
             icon: "PrecisionManufacturing",
             fields,
             visible: config.visible ?? DEFAULT_CUSTOM_SETTINGS.visible,
@@ -1116,6 +1121,13 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
   }
 }
 
+/**
+ * Parses a URDF string and returns the robot model, frames, and transforms.
+ * @param text - urdf 文件内容
+ * @param getFileContents - 一个用来获取文件内容的函数，通常是根据 urdf 文件中的 url 来获取
+ * @param framePrefix
+ * @returns
+ */
 async function parseUrdf(
   text: string,
   getFileContents: (url: string) => Promise<string>,
@@ -1178,9 +1190,7 @@ function createRenderable(args: {
   const name = `${frameId}-${id}-${visual.geometry.geometryType}`;
   const orientation = eulerToQuaternion(visual.origin.rpy);
   const pose = { position: visual.origin.xyz, orientation };
-  console.warn("fallbackColor: ", fallbackColor);
   const color = getColor(visual, robot) ?? fallbackColor ?? DEFAULT_COLOR;
-  console.warn("color: ", color);
   const type = visual.geometry.geometryType;
   switch (type) {
     case "box": {
@@ -1218,15 +1228,12 @@ function createRenderable(args: {
 
 function getColor(visual: UrdfVisual, robot: UrdfRobot): ColorRGBA | undefined {
   if (!visual.material) {
-    console.warn(`No material found for visual ${visual.name}`);
     return undefined;
   }
   if (visual.material.color) {
-    console.warn("material color: ", visual.material.color);
     return visual.material.color;
   }
   if (visual.material.name) {
-    console.warn("material name: ", visual.material.name);
     return robot.materials.get(visual.material.name)?.color;
   }
   return undefined;
