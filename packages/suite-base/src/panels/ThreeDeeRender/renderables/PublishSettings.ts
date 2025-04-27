@@ -23,6 +23,7 @@ export const DEFAULT_PUBLISH_SETTINGS: RendererConfig["publish"] = {
   poseEstimateXDeviation: 0.5,
   poseEstimateYDeviation: 0.5,
   poseEstimateThetaDeviation: _.round(Math.PI / 12, 8),
+  publishFrame: undefined,  // Default is undefined, will use follow frame
 };
 
 export class PublishSettings extends SceneExtension {

@@ -232,6 +232,16 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
     ];
     const followModeValue = this.renderer.config.followMode;
 
+    const publishFrameId = this.renderer.publishFrameId;
+    let publishTfOptions = followTfOptions;
+    const publishTfValue = config.publish.publishFrame ?? publishFrameId;
+    if (publishTfValue != undefined && !this.renderer.transformTree.hasFrame(publishTfValue)) {
+      publishTfOptions = [
+        { label: CoordinateFrame.DisplayName(publishTfValue), value: publishTfValue },
+        ...publishTfOptions,
+      ];
+    }
+
     return {
       path: ["general"],
       node: {
@@ -251,6 +261,13 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
             input: "select",
             options: followModeOptions,
             value: followModeValue,
+          },
+          publishTf:{
+            label: t("threeDee:publishFrame"),
+            help: t("threeDee:publishFrameHelp"),
+            input: "select",
+            options: followTfOptions,
+            value: publishTfValue,
           },
         },
         defaultExpansionState: "expanded",
@@ -318,6 +335,16 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
           }
           draft.followMode = followMode;
         });
+      } else if (path[1] === "publishTf") {
+        const publishTf = value as string | undefined;
+        // Update the configuration. This is done manually since publishTf is at the top level of
+        // config, not under `general`
+        this.renderer.updateConfig((draft) => {
+          draft.publish.publishFrame = publishTf;
+        });
+
+        this.#updatePublishFrameId();
+        this.renderer.settings.errors.clearPath(["general", "publishTf"]);
       }
 
       this.updateSettingsTree();
@@ -399,6 +426,7 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
 
   #handleTransformTreeUpdated = (): void => {
     this.#updateFollowFrameId();
+    this.#updatePublishFrameId();
     this.updateSettingsTree();
   };
 
@@ -438,6 +466,22 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
       }
     }
   };
+
+  #updatePublishFrameId() {
+    const { publish } = this.renderer.config;
+    const { transformTree } = this.renderer;
+
+    const publishFrameExists = publish.publishFrame != undefined && transformTree.hasFrame(publish.publishFrame);
+    if (publishFrameExists) {
+      this.renderer.setPublishFrameId(publish.publishFrame);
+      return;
+    }
+
+    // No valid renderFrameId set, or new frames have been added, fall back to selecting the
+    // heuristically most valid frame (if any frames are present)
+    const publishFrameId = transformTree.getDefaultFollowFrameId();
+    this.renderer.setPublishFrameId(publishFrameId);
+  }
 
   #handleErrorChange = (): void => {
     this.updateSettingsTree();

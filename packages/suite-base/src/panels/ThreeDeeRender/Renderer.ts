@@ -229,6 +229,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   public currentTime = 0n;
   public fixedFrameId: string | undefined;
   public followFrameId: string | undefined;
+  public publishFrameId: string | undefined;
 
   public labelPool = new LabelPool({ fontFamily: fontMonospace });
   public markerPool = new MarkerPool(this);
@@ -1166,6 +1167,13 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
       log.debug(`Setting followFrameId to ${frameId}`);
     }
     this.followFrameId = frameId;
+  }
+
+  public setPublishFrameId(frameId: string | undefined): void {
+    if (this.publishFrameId !== frameId) {
+      log.debug(`Setting publishFrameId to ${frameId}`);
+    }
+    this.publishFrameId = frameId;
   }
 
   public async fetchAsset(

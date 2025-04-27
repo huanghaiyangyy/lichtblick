@@ -55,6 +55,8 @@ import {
   makePointMessage,
   makePoseEstimateMessage,
   makePoseMessage,
+  pointTransform,
+  poseTransform,
 } from "./publish";
 import type { LayerSettingsTransform } from "./renderables/FrameAxes";
 import { PublishClickEventMap } from "./renderables/PublishClickTool";
@@ -743,9 +745,14 @@ export function ThreeDeeRender(props: {
       setPublishActive(true);
     };
     const onSubmit = (event: PublishClickEventMap["foxglove.publish-submit"]) => {
-      const frameId = renderer?.followFrameId;
-      if (frameId == undefined) {
+      const followFrameId = renderer?.followFrameId;
+      const publishFrameId = latestPublishConfig.current.publishFrame ?? followFrameId;
+      if (followFrameId == undefined) {
         log.warn("Unable to publish, renderFrameId is not set");
+        return;
+      }
+      if (publishFrameId == undefined) {
+        log.warn("Unable to publish, publishFrameId is not set");
         return;
       }
       if (!context.publish) {
@@ -760,19 +767,22 @@ export function ThreeDeeRender(props: {
       try {
         switch (event.publishClickType) {
           case "point": {
-            const message = makePointMessage(event.point, frameId);
+            let point = pointTransform(event.point, followFrameId, publishFrameId, renderer);
+            const message = makePointMessage(point, publishFrameId);
             context.publish(publishTopics.point, message);
             break;
           }
           case "pose": {
-            const message = makePoseMessage(event.pose, frameId);
+            let pose = poseTransform(event.pose, followFrameId, publishFrameId, renderer);
+            const message = makePoseMessage(pose, publishFrameId);
             context.publish(publishTopics.goal, message);
             break;
           }
           case "pose_estimate": {
+            let pose = poseTransform(event.pose, followFrameId, publishFrameId, renderer);
             const message = makePoseEstimateMessage(
-              event.pose,
-              frameId,
+              pose,
+              publishFrameId,
               latestPublishConfig.current.poseEstimateXDeviation,
               latestPublishConfig.current.poseEstimateYDeviation,
               latestPublishConfig.current.poseEstimateThetaDeviation,
