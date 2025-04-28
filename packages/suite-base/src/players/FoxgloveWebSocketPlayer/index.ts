@@ -1009,7 +1009,9 @@ export default class FoxgloveWebSocketPlayer implements Player {
 
   public setPublishers(publishers: AdvertiseOptions[]): void {
     // Filter out duplicates.
+    console.debug("[setPublishers] publishers", publishers);
     const uniquePublications = _.uniqWith(publishers, _.isEqual);
+    console.debug("[setPublishers] uniquePublications", uniquePublications);
 
     // Save publications and return early if we are not connected or the advertise capability is missing.
     if (
@@ -1023,6 +1025,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
 
     // Determine new & removed publications.
     const currentPublications = Array.from(this.#publicationsByTopic.values());
+    console.debug("[setPublishers] currentPublications", currentPublications);
     const removedPublications = currentPublications.filter((channel) => {
       return (
         uniquePublications.find(
@@ -1030,6 +1033,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
         ) == undefined
       );
     });
+    console.debug("[setPublishers] removedPublications", removedPublications);
     const newPublications = uniquePublications.filter(({ topic, schemaName }) => {
       return (
         currentPublications.find(
@@ -1037,6 +1041,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
         ) == undefined
       );
     });
+    console.debug("[setPublishers] newPublications", newPublications);
 
     // Unadvertise removed channels.
     for (const channel of removedPublications) {

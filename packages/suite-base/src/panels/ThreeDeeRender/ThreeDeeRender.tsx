@@ -62,6 +62,7 @@ import type { LayerSettingsTransform } from "./renderables/FrameAxes";
 import { PublishClickEventMap } from "./renderables/PublishClickTool";
 import { DEFAULT_PUBLISH_SETTINGS } from "./renderables/PublishSettings";
 import { InterfaceMode } from "./types";
+import { TopicAdvertisementManager } from "@lichtblick/suite-base/panels/ThreeDeeRender/TopicAdvertisementManager";
 
 const log = Logger.getLogger(__filename);
 
@@ -714,27 +715,26 @@ export function ThreeDeeRender(props: {
     };
   }, [config.publish.poseTopic, config.publish.pointTopic, config.publish.poseEstimateTopic]);
 
+  const topicManager = useMemo(() => TopicAdvertisementManager.getInstance(), []);
   useEffect(() => {
     const datatypes =
       context.dataSourceProfile === "ros2" ? PublishRos2Datatypes : PublishRos1Datatypes;
-    context.advertise?.(publishTopics.goal, "geometry_msgs/PoseStamped", { datatypes });
-    context.advertise?.(publishTopics.point, "geometry_msgs/PointStamped", { datatypes });
-    context.advertise?.(publishTopics.pose, "geometry_msgs/PoseWithCovarianceStamped", {
-      datatypes,
-    });
-    context.advertise?.("/control_switch", "std_msgs/Int32", { datatypes });
-    context.advertise?.("/park_out_type", "std_msgs/String", { datatypes });
-    context.advertise?.("/parking_head_in", "std_msgs/Int32", { datatypes });
-    context.advertise?.("/record_trace", "std_msgs/Int32", { datatypes });
+    topicManager.advertise(context, publishTopics.goal, "geometry_msgs/PoseStamped", { datatypes });
+    topicManager.advertise(context, publishTopics.point, "geometry_msgs/PointStamped", { datatypes });
+    topicManager.advertise(context, publishTopics.pose, "geometry_msgs/PoseWithCovarianceStamped", { datatypes });
+    topicManager.advertise(context, "/control_switch", "std_msgs/Int32", { datatypes });
+    topicManager.advertise(context, "/park_out_type", "std_msgs/String", { datatypes });
+    topicManager.advertise(context, "/parking_head_in", "std_msgs/Int32", { datatypes });
+    topicManager.advertise(context, "/record_trace", "std_msgs/Int32", { datatypes });
 
     return () => {
-      context.unadvertise?.(publishTopics.goal);
-      context.unadvertise?.(publishTopics.point);
-      context.unadvertise?.(publishTopics.pose);
-      context.unadvertise?.("/control_switch");
-      context.unadvertise?.("/park_out_type");
-      context.unadvertise?.("/parking_head_in");
-      context.unadvertise?.("/record_trace");
+      topicManager.unadvertise(context, publishTopics.goal);
+      topicManager.unadvertise(context, publishTopics.point);
+      topicManager.unadvertise(context, publishTopics.pose);
+      topicManager.unadvertise(context, "/control_switch");
+      topicManager.unadvertise(context, "/park_out_type");
+      topicManager.unadvertise(context, "/parking_head_in");
+      topicManager.unadvertise(context, "/record_trace");
     };
   }, [publishTopics, context, context.dataSourceProfile]);
 
