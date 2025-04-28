@@ -25,6 +25,7 @@ export const PublishRos1Datatypes = new Map<string, MessageDefinition>(
       "geometry_msgs/Quaternion",
       "std_msgs/Int32",
       "std_msgs/Header",
+      "std_msgs/String",
     ] as Array<keyof typeof ros1>
   ).map((type) => [type, ros1[type]]),
 );
@@ -41,6 +42,7 @@ export const PublishRos2Datatypes = new Map<string, MessageDefinition>(
       "geometry_msgs/Quaternion",
       "std_msgs/Int32",
       "std_msgs/Header",
+      "std_msgs/String",
     ] as Array<keyof typeof ros2galactic>
   ).map((type) => [type, ros2galactic[type]]),
 );
