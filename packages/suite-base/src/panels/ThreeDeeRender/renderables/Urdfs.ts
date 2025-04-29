@@ -1211,7 +1211,7 @@ function createRenderable(args: {
       return new RenderableSphere(name, marker, undefined, renderer);
     }
     case "mesh": {
-      const isCollada = visual.geometry.filename.toLowerCase().endsWith(".dae");
+      // const isCollada = visual.geometry.filename.toLowerCase().endsWith(".dae");
       // Use embedded materials if the mesh is a Collada file
       // const embedded = isCollada ? EmbeddedMaterialUsage.Use : EmbeddedMaterialUsage.Ignore;
       // 现在默认不使用 EmbeddedMaterialUsage

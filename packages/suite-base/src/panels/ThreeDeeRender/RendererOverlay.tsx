@@ -6,12 +6,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Ruler20Filled, Ruler20Regular } from "@fluentui/react-icons";
-import { UnfoldLess, UnfoldMore, Computer } from "@mui/icons-material";
+import { Computer } from "@mui/icons-material";
 import {
   Button,
   IconButton,
-  ListItemIcon,
-  ListItemText,
   Menu,
   MenuItem,
   Paper,
@@ -23,7 +21,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useLongPress } from "react-use";
 import tc from "tinycolor2";
 import { makeStyles } from "tss-react/mui";
 
