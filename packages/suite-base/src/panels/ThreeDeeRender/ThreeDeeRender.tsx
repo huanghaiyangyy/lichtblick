@@ -48,7 +48,7 @@ import { SELECTED_ID_VARIABLE } from "./Renderable";
 import { Renderer } from "./Renderer";
 import { RendererContext, useRendererEvent, useRendererProperty } from "./RendererContext";
 import { RendererOverlay } from "./RendererOverlay";
-import { CameraState, DEFAULT_CAMERA_STATE } from "./camera";
+import { CameraState, DEFAULT_CAMERA_STATE, PARKING_MODE_VIEW_3D, PARKING_MODE_VIEW_2D } from "./camera";
 import {
   PublishRos1Datatypes,
   PublishRos2Datatypes,
@@ -944,6 +944,51 @@ export function ThreeDeeRender(props: {
     context.publish("/record_trace", message);
   }, [context]);
 
+  const [cameraLocked, setCameraLocked] = useState(false);
+
+  const onClickParkingModeView = useCallback(() => {
+    if (!renderer) {
+      return;
+    }
+
+    // Toggle the lock state
+    const newLockState = !cameraLocked;
+    setCameraLocked(newLockState);
+
+    const currentState = renderer.getCameraState();
+    const parkingModeView = currentState?.perspective === true
+      ? PARKING_MODE_VIEW_3D
+      : PARKING_MODE_VIEW_2D;
+    renderer.setCameraState(parkingModeView);
+    setConfig((prevConfig) => ({ ...prevConfig, cameraState: parkingModeView }));
+
+    renderer.emit("cameraMove", renderer);
+  }, [renderer, cameraLocked]);
+
+  useEffect(() => {
+    if (!renderer || !cameraLocked) {
+      return;
+    }
+
+    const handleCameraMove = () => {
+      // Get the current camera state
+      const currentState = renderer.getCameraState();
+      const parkingModeView = currentState?.perspective === true
+        ? PARKING_MODE_VIEW_3D
+        : PARKING_MODE_VIEW_2D;
+      if (!_.isEqual(currentState, parkingModeView)) {
+        // Reset to parking view
+        renderer.setCameraState(parkingModeView);
+        setConfig((prevConfig) => ({ ...prevConfig, cameraState: parkingModeView }));
+      }
+    };
+
+    renderer.addListener("cameraMove", handleCameraMove);
+    return () => {
+      renderer.removeListener("cameraMove", handleCameraMove);
+    };
+  }, [renderer, cameraLocked]);
+
   const onTogglePerspective = useCallback(() => {
     const currentState = renderer?.getCameraState()?.perspective ?? false;
     actionHandler({
@@ -1006,6 +1051,8 @@ export function ThreeDeeRender(props: {
             onClickRightParkingOutButton={onClickRightParkingOutButton}
             onClickRecordTraceStartButton={onClickRecordTraceStartButton}
             onClickRecordTraceStopButton={onClickRecordTraceStopButton}
+            onClickParkingModeView={onClickParkingModeView}
+            cameraLocked={cameraLocked}
             publishClickType={renderer?.publishClickTool.publishClickType ?? "point"}
             onChangePublishClickType={(type) => {
               renderer?.publishClickTool.setPublishClickType(type);

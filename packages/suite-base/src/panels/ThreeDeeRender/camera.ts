@@ -44,3 +44,29 @@ export const DEFAULT_CAMERA_STATE: CameraState = {
   near: 0.5,
   far: 5000,
 };
+
+export const PARKING_MODE_VIEW_3D: CameraState = {
+  distance: 20,        // Further back view
+  perspective: true,   // Use perspective view
+  phi: 45,
+  target: [0, 0, 0],
+  targetOffset: [0, 0, 0],
+  targetOrientation: [0, 0, 0, 1],
+  thetaOffset: 90,
+  fovy: 60,
+  near: 0.5,
+  far: 5000,
+};
+
+export const PARKING_MODE_VIEW_2D: CameraState = {
+  distance: 20,        // Further back view
+  perspective: false,  // Use orthographic view
+  phi: 45,
+  target: [0, 0, 0],
+  targetOffset: [0, 0, 0],
+  targetOrientation: [0, 0, 0, 1],
+  thetaOffset: 90,
+  fovy: 60,
+  near: 0.5,
+  far: 5000,
+};

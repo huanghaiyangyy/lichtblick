@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Ruler20Filled, Ruler20Regular } from "@fluentui/react-icons";
-import { Computer } from "@mui/icons-material";
+import { Computer, LockReset } from "@mui/icons-material";
 import {
   Button,
   IconButton,
@@ -212,6 +212,8 @@ type Props = {
   onClickRightParkingOutButton: () => void;
   onClickRecordTraceStartButton: () => void;
   onClickRecordTraceStopButton: () => void;
+  onClickParkingModeView: () => void;
+  cameraLocked?: boolean;
   perspective: boolean;
   publishActive: boolean;
   publishClickType: PublishClickType;
@@ -968,6 +970,24 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                 <div className={classes.rulerIcon}>
                   {props.measureActive ? <Ruler20Filled /> : <Ruler20Regular />}
                 </div>
+              </IconButton>
+            </Tooltip>
+            <Tooltip
+              placement="left"
+              title={
+                <>
+                  {`${props.cameraLocked ? "Unlock view" : "Switch to default view and lock view"}`}
+                  <kbd className={classes.kbd}>P</kbd>
+                </>
+              }
+            >
+              <IconButton
+                className={classes.iconButton}
+                size="small"
+                color={props.cameraLocked? "info" : "inherit"}
+                onClick={props.onClickParkingModeView}
+              >
+                <LockReset fontSize="small" />
               </IconButton>
             </Tooltip>
 
