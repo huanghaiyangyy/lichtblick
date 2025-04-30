@@ -976,7 +976,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
               placement="left"
               title={
                 <>
-                  {`${props.cameraLocked ? "Unlock view" : "Switch to default view and lock view"}`}
+                  {`${props.cameraLocked ? "Unlock view" : "Switch to follow mode and lock view"}`}
                   <kbd className={classes.kbd}>P</kbd>
                 </>
               }

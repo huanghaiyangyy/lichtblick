@@ -956,14 +956,39 @@ export function ThreeDeeRender(props: {
     const newLockState = !cameraLocked;
     setCameraLocked(newLockState);
 
-    const currentState = renderer.getCameraState();
-    const parkingModeView = currentState?.perspective === true
-      ? PARKING_MODE_VIEW_3D
-      : PARKING_MODE_VIEW_2D;
-    renderer.setCameraState(parkingModeView);
-    setConfig((prevConfig) => ({ ...prevConfig, cameraState: parkingModeView }));
+    // Get current renderFrameId as the frame we'll use for following
+    const currentExpectFollowFrameId = renderer.followFrameId;
 
-    renderer.emit("cameraMove", renderer);
+    if (newLockState) {
+      // Lock mode: Set camera to parking view and follow the current render frame
+      const currentState = renderer.getCameraState();
+      const parkingModeView = currentState?.perspective === true
+        ? PARKING_MODE_VIEW_3D
+        : PARKING_MODE_VIEW_2D;
+
+      // Set camera state first
+      renderer.setCameraState(parkingModeView);
+
+      // Update config to follow the current frame
+      setConfig((prevConfig) => ({
+        ...prevConfig,
+        cameraState: parkingModeView,
+        followMode: "follow-pose", // Use follow-pose mode
+        renderTf: currentExpectFollowFrameId, // Render the current frame
+      }));
+      renderer.setRenderFrameId(currentExpectFollowFrameId);
+    } else {
+      // Unlock mode: Keep current camera state but stop following
+      // Update config to stop following
+      setConfig((prevConfig) => ({
+        ...prevConfig,
+        followMode: "follow-none", // Don't follow any frame
+        renderTf: undefined // Clear the follow frame
+      }));
+    }
+
+    renderRef.current.needsRender = true;
+    renderer.animationFrame();
   }, [renderer, cameraLocked]);
 
   useEffect(() => {

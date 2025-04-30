@@ -116,12 +116,10 @@ const LAYER_DEFAULT = 0;  // 常规对象的渲染层
 const LAYER_SELECTED = 1; // 被选中对象的渲染层
 
 const RENDER_TF_PATH = ["general", "renderTf"];
-const FOLLOW_TF_PATH = ["general", "followTf"];
 const NO_FRAME_SELECTED = "NO_FRAME_SELECTED";
 const TF_OVERFLOW = "TF_OVERFLOW";
 const CYCLE_DETECTED = "CYCLE_DETECTED";
 const RENDER_FRAME_NOT_FOUND = "RENDER_FRAME_NOT_FOUND";
-const FOLLOW_FRAME_NOT_FOUND = "FOLLOW_FRAME_NOT_FOUND";
 const ADD_TRANSFORM_ERROR = "ADD_TRANSFORM_ERROR";
 
 // An extensionId for creating the top-level settings nodes such as "Topics" and

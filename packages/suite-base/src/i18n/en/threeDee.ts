@@ -27,7 +27,7 @@ export const threeDee = {
     "The coordinate frame to use when rendering the scene.",
   followFrame: "Follow frame",
   followFrameHelp:
-    "The coordinate frame to use when following the camera. The camera position and orientation will be relative to the origin of this frame.",
+    "The coordinate frame you want to follow. You have to press the lock button on the top right of 3D panel to enable this.",
   publishFrame: "Publish frame",
   publishFrameHelp:
     "The coordinate frame to use when publishing messages.",
