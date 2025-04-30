@@ -447,7 +447,7 @@ export class Gltfs extends SceneExtension<GltfRenderable> {
 
     const baseUrl = window.location.origin;
     const modelPaths: Record<string, string> = {
-      id4: `${baseUrl}/models/id4/scene.gltf`,
+      id4: `${baseUrl}/models/id4/id4.glb`,
     };
 
     const modelUrl = modelPaths[modelName];
@@ -497,8 +497,10 @@ export class Gltfs extends SceneExtension<GltfRenderable> {
             const model = gltf.scene;
             const scale = renderable.userData.settings.scale ?? 1.0;
             model.scale.set(scale, scale, scale);
-            model.rotation.set(Math.PI/2, Math.PI/2, 0);
-            model.position.set(1.4, 0, 0);
+            if (modelName === "id4") {
+              model.rotation.set(Math.PI/2, Math.PI/2, 0);
+              model.position.set(1.55, 0.025, 0); // offset caused by the model's origin
+            }
             renderable.add(model);
             renderable.userData.model = model;
 
