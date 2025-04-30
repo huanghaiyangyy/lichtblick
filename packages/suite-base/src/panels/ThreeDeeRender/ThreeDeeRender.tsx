@@ -117,6 +117,7 @@ export function ThreeDeeRender(props: {
     return {
       cameraState,
       followMode: partialConfig?.followMode ?? "follow-pose",
+      renderTf: partialConfig?.renderTf,
       followTf: partialConfig?.followTf,
       scene: partialConfig?.scene ?? {},
       transforms,
@@ -242,14 +243,14 @@ export function ThreeDeeRender(props: {
           context.setSharedPanelState({
             cameraState: newCameraState,
             followMode: config.followMode,
-            followTf: renderer.followFrameId,
+            followTf: renderer.renderFrameId,
           });
         }
       }
     };
     renderer?.addListener("cameraMove", listener);
     return () => void renderer?.removeListener("cameraMove", listener);
-  }, [config.scene.syncCamera, config.followMode, context, renderer?.followFrameId, renderer]);
+  }, [config.scene.syncCamera, config.followMode, context, renderer?.renderFrameId, renderer]);
 
   // Handle user changes in the settings sidebar
   const actionHandler = useCallback(
@@ -268,7 +269,7 @@ export function ThreeDeeRender(props: {
             context.setSharedPanelState({
               cameraState: updatedCameraState,
               followMode: config.followMode,
-              followTf: renderer.followFrameId,
+              followTf: renderer.renderFrameId,
             });
           }
         }
@@ -629,7 +630,7 @@ export function ThreeDeeRender(props: {
       renderer.setCameraSyncError(
         `Follow mode must be ${sharedPanelState.followMode} to sync camera.`,
       );
-    } else if (sharedPanelState.followTf !== renderer.followFrameId) {
+    } else if (sharedPanelState.followTf !== renderer.renderFrameId) {
       renderer.setCameraSyncError(
         `Display frame must be ${sharedPanelState.followTf} to sync camera.`,
       );
@@ -647,7 +648,7 @@ export function ThreeDeeRender(props: {
     config.scene.syncCamera,
     config.followMode,
     renderer,
-    renderer?.followFrameId,
+    renderer?.renderFrameId,
     sharedPanelState,
   ]);
 
@@ -745,9 +746,9 @@ export function ThreeDeeRender(props: {
       setPublishActive(true);
     };
     const onSubmit = (event: PublishClickEventMap["foxglove.publish-submit"]) => {
-      const followFrameId = renderer?.followFrameId;
-      const publishFrameId = latestPublishConfig.current.publishFrame ?? followFrameId;
-      if (followFrameId == undefined) {
+      const renderFrameId = renderer?.renderFrameId;
+      const publishFrameId = latestPublishConfig.current.publishFrame ?? renderFrameId;
+      if (renderFrameId == undefined) {
         log.warn("Unable to publish, renderFrameId is not set");
         return;
       }
@@ -767,19 +768,19 @@ export function ThreeDeeRender(props: {
       try {
         switch (event.publishClickType) {
           case "point": {
-            let point = pointTransform(event.point, followFrameId, publishFrameId, renderer);
+            let point = pointTransform(event.point, renderFrameId, publishFrameId, renderer);
             const message = makePointMessage(point, publishFrameId);
             context.publish(publishTopics.point, message);
             break;
           }
           case "pose": {
-            let pose = poseTransform(event.pose, followFrameId, publishFrameId, renderer);
+            let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
             const message = makePoseMessage(pose, publishFrameId);
             context.publish(publishTopics.goal, message);
             break;
           }
           case "pose_estimate": {
-            let pose = poseTransform(event.pose, followFrameId, publishFrameId, renderer);
+            let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
             const message = makePoseEstimateMessage(
               pose,
               publishFrameId,
@@ -810,7 +811,7 @@ export function ThreeDeeRender(props: {
     context,
     latestPublishConfig,
     publishTopics,
-    renderer?.followFrameId,
+    renderer?.renderFrameId,
     renderer?.publishClickTool,
   ]);
 

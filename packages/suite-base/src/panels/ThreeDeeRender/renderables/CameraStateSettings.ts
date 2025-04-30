@@ -39,6 +39,7 @@ const tempVec3 = new THREE.Vector3();
 
 const tempSpherical = new THREE.Spherical();
 const tempEuler = new THREE.Euler();
+const RENDER_TF_PATH = ["general", "renderTf"];
 const FOLLOW_TF_PATH = ["general", "followTf"];
 export class CameraStateSettings extends SceneExtension implements ICameraHandler {
   // The frameId's of the fixed and render frames used to create the current unfollowPoseSnapshot
@@ -209,20 +210,29 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
 
     // If the user-selected frame does not exist, show it in the dropdown
     // anyways. A settings node error will be displayed
-    let followTfOptions = this.renderer.coordinateFrameList;
+    let renderTfOptions = this.renderer.coordinateFrameList;
+    const renderFrameId = this.renderer.renderFrameId;
     const followFrameId = this.renderer.followFrameId;
 
     this.#updateFollowTfError();
 
     // always show current config value if it exists
-    const followTfValue = config.followTf ?? followFrameId;
-    if (followTfValue != undefined && !this.renderer.transformTree.hasFrame(followTfValue)) {
-      followTfOptions = [
-        { label: CoordinateFrame.DisplayName(followTfValue), value: followTfValue },
-        ...followTfOptions,
+    const renderTfValue = config.renderTf ?? renderFrameId;
+    if (renderTfValue != undefined && !this.renderer.transformTree.hasFrame(renderTfValue)) {
+      renderTfOptions = [
+        { label: CoordinateFrame.DisplayName(renderTfValue), value: renderTfValue },
+        ...renderTfOptions,
       ];
     }
+    const renderTfError = this.renderer.settings.errors.errors.errorAtPath(RENDER_TF_PATH);
 
+    const followTfValue = config.followTf ?? followFrameId;
+    if (followTfValue != undefined && !this.renderer.transformTree.hasFrame(followTfValue)) {
+      renderTfOptions = [
+        { label: CoordinateFrame.DisplayName(followTfValue), value: followTfValue },
+        ...renderTfOptions,
+      ];
+    }
     const followTfError = this.renderer.settings.errors.errors.errorAtPath(FOLLOW_TF_PATH);
 
     const followModeOptions = [
@@ -233,7 +243,7 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
     const followModeValue = this.renderer.config.followMode;
 
     const publishFrameId = this.renderer.publishFrameId;
-    let publishTfOptions = followTfOptions;
+    let publishTfOptions = renderTfOptions;
     const publishTfValue = config.publish.publishFrame ?? publishFrameId;
     if (publishTfValue != undefined && !this.renderer.transformTree.hasFrame(publishTfValue)) {
       publishTfOptions = [
@@ -247,11 +257,19 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
       node: {
         label: t("threeDee:frame"),
         fields: {
-          followTf: {
-            label: t("threeDee:displayFrame"),
-            help: t("threeDee:displayFrameHelp"),
+          renderTf: {
+            label: t("threeDee:renderFrame"),
+            help: t("threeDee:renderFrameHelp"),
             input: "select",
-            options: followTfOptions,
+            options: renderTfOptions,
+            value: renderTfValue,
+            error: renderTfError,
+          },
+          followTf: {
+            label: t("threeDee:followFrame"),
+            help: t("threeDee:followFrameHelp"),
+            input: "select",
+            options: renderTfOptions,
             value: followTfValue,
             error: followTfError,
           },
@@ -266,7 +284,7 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
             label: t("threeDee:publishFrame"),
             help: t("threeDee:publishFrameHelp"),
             input: "select",
-            options: followTfOptions,
+            options: publishTfOptions,
             value: publishTfValue,
           },
         },
@@ -310,7 +328,17 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
 
     // frame settings
     if (category === "general") {
-      if (path[1] === "followTf") {
+      if (path[1] === "renderTf") {
+        const renderTf = value as string | undefined;
+        // Update the configuration. This is done manually since renderTf is at the top level of
+        // config, not under `general`
+        this.renderer.updateConfig((draft) => {
+          draft.renderTf = renderTf;
+        });
+
+        this.#updateRenderFrameId();
+        this.renderer.settings.errors.clearPath(["general", "renderTf"]);
+      } else if (path[1] === "followTf") {
         const followTf = value as string | undefined;
         // Update the configuration. This is done manually since followTf is at the top level of
         // config, not under `general`
@@ -425,9 +453,48 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
   };
 
   #handleTransformTreeUpdated = (): void => {
+    this.#updateRenderFrameId();
     this.#updateFollowFrameId();
     this.#updatePublishFrameId();
     this.updateSettingsTree();
+  };
+
+  #updateRenderFrameId() {
+    const { renderTf } = this.renderer.config;
+    const { transformTree } = this.renderer;
+    this.#updateRenderTfError();
+
+    const renderTfFrameExists = renderTf != undefined && transformTree.hasFrame(renderTf);
+    if (renderTfFrameExists) {
+      this.renderer.setRenderFrameId(renderTf);
+      return;
+    }
+
+    // No valid renderFrameId set, or new frames have been added, fall back to selecting the
+    // heuristically most valid frame (if any frames are present)
+    const renderFrameId = transformTree.getDefaultFollowFrameId();
+    this.renderer.setRenderFrameId(renderFrameId);
+
+  }
+
+  #updateRenderTfError = (): void => {
+    const { renderTf } = this.renderer.config;
+    const { transformTree } = this.renderer;
+
+    if (renderTf != undefined) {
+      const renderTfFrameExists = transformTree.hasFrame(renderTf);
+      if (renderTfFrameExists) {
+        this.renderer.settings.errors.remove(RENDER_TF_PATH, DISPLAY_FRAME_NOT_FOUND);
+      } else {
+        this.renderer.settings.errors.add(
+          RENDER_TF_PATH,
+          DISPLAY_FRAME_NOT_FOUND,
+          t("threeDee:frameNotFound", {
+            frameId: renderTf,
+          }),
+        );
+      }
+    }
   };
 
   #updateFollowFrameId() {

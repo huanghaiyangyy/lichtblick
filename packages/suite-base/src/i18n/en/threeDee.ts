@@ -22,9 +22,12 @@ export const threeDee = {
   // Frame
   age: "Age",
   axisScale: "Axis scale",
-  displayFrame: "Display frame",
-  displayFrameHelp:
-    "The coordinate frame to place the camera in. The camera position and orientation will be relative to the origin of this frame.",
+  renderFrame: "Render frame",
+  renderFrameHelp:
+    "The coordinate frame to use when rendering the scene.",
+  followFrame: "Follow frame",
+  followFrameHelp:
+    "The coordinate frame to use when following the camera. The camera position and orientation will be relative to the origin of this frame.",
   publishFrame: "Publish frame",
   publishFrameHelp:
     "The coordinate frame to use when publishing messages.",

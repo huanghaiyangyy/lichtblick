@@ -108,6 +108,8 @@ export type RendererConfig = {
   /** Camera settings for the currently rendering scene */
   cameraState: CameraState;
   /** Coordinate frameId of the rendering frame */
+  renderTf: string | undefined;
+  /** Coordinate frameId of the following frame */
   followTf: string | undefined;
   /** Camera follow mode */
   followMode: FollowMode;
@@ -263,7 +265,8 @@ export interface IRenderer extends EventEmitter<RendererEvents> {
   /**
    * The frameId that we _want_ to follow and render in if it exists.
    */
-  readonly followFrameId: string | undefined;
+  readonly renderFrameId: string | undefined;
+  followFrameId: string | undefined;
   publishFrameId?: string | undefined;
 
   labelPool: LabelPool;
@@ -351,6 +354,9 @@ export interface IRenderer extends EventEmitter<RendererEvents> {
   addMessageEvent(messageEvent: Readonly<MessageEvent>): void;
 
   /**  Set desired render/display frame, will render using fallback if id is undefined or frame does not exist */
+  setRenderFrameId(frameId: string | undefined): void;
+
+  /**  Set desired follow frame, will render using fallback if id is undefined or frame does not exist */
   setFollowFrameId(frameId: string | undefined): void;
 
   /** Set desired publish frame, will publish using fallback if id is undefined or frame does not exist */

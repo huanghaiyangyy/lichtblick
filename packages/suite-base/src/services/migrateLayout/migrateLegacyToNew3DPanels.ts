@@ -50,11 +50,13 @@ type Legacy3DConfig = {
   clickToPublishPoseEstimateYDeviation: number;
   clickToPublishPoseEstimateThetaDeviation: number;
   followMode?: "follow" | "follow-orientation" | "no-follow";
+  renderTf?: string;
   followTf?: string;
 };
 
 function migrateLegacyToNew3DConfig(legacyConfig: Partial<Legacy3DConfig>): RendererConfig {
   return {
+    renderTf: legacyConfig.renderTf,
     followTf: legacyConfig.followTf,
     followMode:
       legacyConfig.followMode === "follow-orientation"

@@ -115,10 +115,12 @@ const DARK_BACKDROP = new THREE.Color(palette.dark.background?.default);
 const LAYER_DEFAULT = 0;  // 常规对象的渲染层
 const LAYER_SELECTED = 1; // 被选中对象的渲染层
 
+const RENDER_TF_PATH = ["general", "renderTf"];
 const FOLLOW_TF_PATH = ["general", "followTf"];
 const NO_FRAME_SELECTED = "NO_FRAME_SELECTED";
 const TF_OVERFLOW = "TF_OVERFLOW";
 const CYCLE_DETECTED = "CYCLE_DETECTED";
+const RENDER_FRAME_NOT_FOUND = "RENDER_FRAME_NOT_FOUND";
 const FOLLOW_FRAME_NOT_FOUND = "FOLLOW_FRAME_NOT_FOUND";
 const ADD_TRANSFORM_ERROR = "ADD_TRANSFORM_ERROR";
 
@@ -228,6 +230,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   public coordinateFrameList: SelectEntry[] = [];
   public currentTime = 0n;
   public fixedFrameId: string | undefined;
+  public renderFrameId: string | undefined;
   public followFrameId: string | undefined;
   public publishFrameId: string | undefined;
 
@@ -1162,6 +1165,13 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     }
   }
 
+  public setRenderFrameId(frameId: string | undefined): void {
+    if (this.renderFrameId !== frameId) {
+      log.debug(`Setting renderFrameId to ${frameId}`);
+    }
+    this.renderFrameId = frameId;
+  }
+
   public setFollowFrameId(frameId: string | undefined): void {
     if (this.followFrameId !== frameId) {
       log.debug(`Setting followFrameId to ${frameId}`);
@@ -1201,14 +1211,14 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     camera.layers.set(LAYER_DEFAULT);
 
     // use the FALLBACK_FRAME_ID if renderFrame is undefined and there are no options for transforms
-    const renderFrameId =
-      this.followFrameId && this.transformTree.frame(this.followFrameId)
-        ? this.followFrameId
+    const renderFrameId_ =
+      this.renderFrameId && this.transformTree.frame(this.renderFrameId)
+        ? this.renderFrameId
         : CoordinateFrame.FALLBACK_FRAME_ID;
     const fixedFrameId = this.fixedFrameId ?? CoordinateFrame.FALLBACK_FRAME_ID;
 
     for (const sceneExtension of this.sceneExtensions.values()) {
-      sceneExtension.startFrame(currentTime, renderFrameId, fixedFrameId);
+      sceneExtension.startFrame(currentTime, renderFrameId_, fixedFrameId);
     }
 
     // 实际进行渲染的地方
@@ -1263,7 +1273,7 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
    */
   #updateFixedFrameId(): void {
     const frame =
-      this.followFrameId != undefined ? this.transformTree.frame(this.followFrameId) : undefined;
+      this.renderFrameId != undefined ? this.transformTree.frame(this.renderFrameId) : undefined;
 
     if (frame == undefined) {
       this.fixedFrameId = undefined;
@@ -1476,35 +1486,35 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   }
 
   #updateFrameErrors(): void {
-    if (this.followFrameId == undefined) {
+    if (this.renderFrameId == undefined) {
       // No frames available
       this.settings.errors.add(
-        FOLLOW_TF_PATH,
+        RENDER_TF_PATH,
         NO_FRAME_SELECTED,
         i18next.t("threeDee:noCoordinateFramesFound"),
       );
       return;
     }
 
-    this.settings.errors.remove(FOLLOW_TF_PATH, NO_FRAME_SELECTED);
+    this.settings.errors.remove(RENDER_TF_PATH, NO_FRAME_SELECTED);
 
-    const frame = this.transformTree.frame(this.followFrameId);
+    const frame = this.transformTree.frame(this.renderFrameId);
 
-    // The follow frame id should be chosen from a frameId that exists, but
+    // The render frame id should be chosen from a frameId that exists, but
     // we still need to watch out for the case that the transform tree was
     // cleared before that could be updated
     if (!frame) {
       this.settings.errors.add(
-        FOLLOW_TF_PATH,
-        FOLLOW_FRAME_NOT_FOUND,
+        RENDER_TF_PATH,
+        RENDER_FRAME_NOT_FOUND,
         i18next.t("threeDee:frameNotFound", {
-          frameId: this.followFrameId,
+          frameId: this.renderFrameId,
         }),
       );
       return;
     }
 
-    this.settings.errors.remove(FOLLOW_TF_PATH, FOLLOW_FRAME_NOT_FOUND);
+    this.settings.errors.remove(RENDER_TF_PATH, RENDER_FRAME_NOT_FOUND);
   }
   public getContextMenuItems = (): PanelContextMenuItem[] => {
     return Array.from(this.sceneExtensions.values()).flatMap((extension) =>
