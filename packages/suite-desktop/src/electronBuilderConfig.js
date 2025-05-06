@@ -59,6 +59,9 @@ function makeElectronBuilderConfig(params) {
           mimeType: "application/zip",
         },
       ],
+      extraResources: [
+        { from: path.join(__dirname, "../resources/models"), to: "models" },
+      ],
     },
     win: {
       target: [
@@ -85,6 +88,9 @@ function makeElectronBuilderConfig(params) {
           mimeType: "application/zip",
         },
       ],
+      extraResources: [
+        { from: path.join(__dirname, "../resources/models"), to: "models" },
+      ],
     },
     mac: {
       target: {
@@ -108,6 +114,7 @@ function makeElectronBuilderConfig(params) {
         { from: path.join(__dirname, "../resources/icon/BagIcon.png"), to: "BagIcon.png" },
         { from: path.join(__dirname, "../resources/icon/McapIcon.png"), to: "McapIcon.png" },
         { from: path.join(__dirname, "../resources/icon/FoxeIcon.png"), to: "FoxeIcon.png" },
+        { from: path.join(__dirname, "../resources/models"), to: "models" },
       ],
       extendInfo: {
         CFBundleDocumentTypes: [

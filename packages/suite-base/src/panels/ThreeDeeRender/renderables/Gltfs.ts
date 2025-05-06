@@ -18,6 +18,7 @@ import { SettingsTreeEntry } from "../SettingsManager";
 import { BaseSettings, CustomLayerSettings } from "../settings";
 import { makePose } from "../transforms";
 import { updatePose } from "../updatePose";
+import isDesktopApp from "@lichtblick/suite-base/util/isDesktopApp";
 
 const log = Logger.getLogger(__filename);
 
@@ -445,14 +446,15 @@ export class Gltfs extends SceneExtension<GltfRenderable> {
       return;
     }
 
-    const baseUrl = window.location.origin;
+    const isDesktop = isDesktopApp();
+    const baseUrl = window.location.origin + (isDesktop ? "/resources" : "");
     const modelPaths: Record<string, string> = {
       id4: `${baseUrl}/models/id4/id4.glb`,
     };
 
     const modelUrl = modelPaths[modelName];
     if (!modelUrl) {
-      return;
+      return undefined;
     }
 
     // Get the renderable for this instance
@@ -486,7 +488,11 @@ export class Gltfs extends SceneExtension<GltfRenderable> {
         log.debug(`Fetched ${asset.data.length} byte GLTF model from ${modelUrl}`);
 
         // Set the resource path to help locate textures
-        const resourcePath = `${baseUrl}/models/${modelName}/`;
+        const resourcePath = modelPaths[modelName];
+        if (!resourcePath) {
+          log.error(`Resource path not found for model: ${modelName}`);
+          return;
+        }
         this.#gltfLoader.setResourcePath(resourcePath);
 
         // Load the model with GLTFLoader

@@ -703,7 +703,8 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
       return undefined;
     }
 
-    const baseUrl = window.location.origin;
+    const isDesktop = isDesktopApp();
+    const baseUrl = window.location.origin + (isDesktop ? "/resources" : "");
     const modelPaths: Record<string, string> = {
       lexus: `${baseUrl}/models/lexus/lexus.urdf`,
     }
@@ -1001,7 +1002,7 @@ export class Urdfs extends SceneExtension<UrdfRenderable> {
       baseUrl = `file://${filePath}`;
     } else if (sourceType === "defaultModel") {
       const modelName = (settings as Partial<LayerSettingsCustomUrdf>).defaultModel;
-      baseUrl = `${window.location.origin}/models/${modelName}/`;
+      baseUrl = `${window.location.origin + (isDesktopApp()? "/resources" : "")}/models/${modelName}/`;
     }
 
     // Parse the URDF
