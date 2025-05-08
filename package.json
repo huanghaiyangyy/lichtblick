@@ -26,7 +26,7 @@
     "desktop:build:prod": "webpack --mode production --progress --config desktop/webpack.config.ts",
     "desktop:serve": "webpack serve --mode development --progress --config desktop/webpack.config.ts",
     "desktop:serve:quicklook": "webpack serve --mode development --progress --config desktop/webpack.quicklook.config.ts",
-    "desktop:start": "electron desktop/.webpack",
+    "desktop:start": "electron --remote-debugging-port=9222 desktop/.webpack",
     "web:build:dev": "webpack --mode development --progress --config web/webpack.config.ts",
     "web:build:prod": "webpack --mode production --progress --config web/webpack.config.ts",
     "web:serve": "webpack serve --mode development --progress --config web/webpack.config.ts",

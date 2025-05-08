@@ -47,6 +47,7 @@ import delay from "@lichtblick/suite-base/util/delay";
 import { BlockLoader } from "./BlockLoader";
 import { BufferedIterableSource } from "./BufferedIterableSource";
 import { IIterableSource, IteratorResult } from "./IIterableSource";
+import { RosPublisherInterface } from "@lichtblick/suite-base/players/IterablePlayer/rosPublisher/RosPublisher";
 
 const log = Log.getLogger(__filename);
 
@@ -94,6 +95,18 @@ type IterablePlayerOptions = {
 
   // Set to _false_ to disable preloading. (default: true)
   enablePreload?: boolean;
+
+  // Enable publishing to ROS network during playback (default: false)
+  enableRosPublishing?: boolean;
+
+  // ROS master URI when publishing is enabled (default: "http://localhost:11311")
+  rosMasterUri?: string;
+
+  // ROS hostname when publishing is enabled
+  rosHostname?: string;
+
+  // Topics to publish (if empty, publishes all topics)
+  publishTopics?: string[];
 };
 
 type IterablePlayerState =
@@ -126,6 +139,12 @@ export class IterablePlayer implements Player {
   #start?: Time;
   #end?: Time;
   #enablePreload = true;
+
+  #enableRosPublishing = false;
+  #rosMasterUri = "http://localhost:11311";
+  #publishTopics?: string[];
+
+  #rosPublisher?: RosPublisherInterface;
 
   // next read start time indicates where to start reading for the next tick
   // after a tick read, it is set to 1nsec past the end of the read operation (preparing for the next tick)
@@ -187,7 +206,18 @@ export class IterablePlayer implements Player {
   #resolveIsClosed: () => void = () => {};
 
   public constructor(options: IterablePlayerOptions) {
-    const { metricsCollector, urlParams, source, name, enablePreload, sourceId } = options;
+    const {
+      metricsCollector,
+      urlParams,
+      source,
+      name,
+      enablePreload,
+      sourceId,
+      enableRosPublishing,
+      rosMasterUri,
+      rosHostname,
+      publishTopics
+    } = options;
 
     this.#iterableSource = source;
     this.#bufferedSource = new BufferedIterableSource(source);
@@ -197,6 +227,12 @@ export class IterablePlayer implements Player {
     this.#metricsCollector.playerConstructed();
     this.#enablePreload = enablePreload ?? true;
     this.#sourceId = sourceId;
+
+    // Initialize ROS publishing options
+    this.#enableRosPublishing = enableRosPublishing ?? false;
+    this.#rosMasterUri = rosMasterUri ?? "http://localhost:11311";
+    this.#publishTopics = publishTopics;
+    console.debug("[Player] enableRosPublishing:", enableRosPublishing, "rosMasterUri:", rosMasterUri, "rosHostname:", rosHostname, "publishTopics:", publishTopics);
 
     this.isClosed = new Promise((resolveClose) => {
       this.#resolveIsClosed = resolveClose;
@@ -306,7 +342,16 @@ export class IterablePlayer implements Player {
 
   public setSubscriptions(newSubscriptions: SubscribePayload[]): void {
     log.debug("set subscriptions", newSubscriptions);
-    this.#subscriptions = newSubscriptions;
+    const allSubscriptions: SubscribePayload[] = this.#providerTopics.map(topic => ({
+      topic: topic.name,
+      preloadType: "partial" as const,
+    }));
+    this.#subscriptions = allSubscriptions;
+    const tf_sub: SubscribePayload = {
+      topic: "/tf",
+      preloadType: "full" as const,
+    }
+    this.#subscriptions.push(tf_sub);
 
     const allTopics: TopicSelection = new Map(
       this.#subscriptions.map((subscription) => [subscription.topic, subscription]),
@@ -345,6 +390,19 @@ export class IterablePlayer implements Player {
         this.#setState("seek-backfill");
       }
     }
+  }
+
+  public subscribeToAllTopics(): void {
+    if (!this.#providerTopics || this.#providerTopics.length === 0) {
+      return;
+    }
+
+    const allSubscriptions: SubscribePayload[] = this.#providerTopics.map(topic => ({
+      topic: topic.name,
+      preloadType: "partial" as const,
+    }));
+
+    this.setSubscriptions(allSubscriptions);
   }
 
   public setPublishers(_publishers: AdvertiseOptions[]): void {
@@ -557,17 +615,30 @@ export class IterablePlayer implements Player {
       }
 
       this.#presence = PlayerPresence.PRESENT;
+
+      // Initialize ROS publishing if enabled
+      if (this.#enableRosPublishing) {
+        await this.#initializeRosPublishing();
+      }
     } catch (error) {
       this.#setError(`Error initializing: ${error.message}`, error);
     }
     this.#queueEmitState();
 
     if (!this.#hasError && this.#start) {
+      // Subscribe to all available topics automatically
+      this.subscribeToAllTopics();
+
       // Wait a bit until panels have had the chance to subscribe to topics before we start
       // playback.
       await delay(START_DELAY_MS);
 
       this.#blockLoader?.setTopics(this.#preloadTopics);
+
+      // Set up ROS publishers if enabled
+      if (this.#enableRosPublishing) {
+        await this.#setupRosPublishers();
+      }
 
       // Block loadings is constantly running and tries to keep the preloaded messages in memory
       this.#blockLoadingProcess = this.#startBlockLoading().catch((err: unknown) => {
@@ -962,6 +1033,13 @@ export class IterablePlayer implements Player {
       clearTimeout(tickTimeout);
     }
 
+    if (this.#enableRosPublishing && msgEvents.length > 0) {
+      // If we have messages, publish them to ROS
+      for (const msgEvent of msgEvents) {
+        this.#publishMessageToRos(msgEvent);
+      }
+    }
+
     // Set the presence back to PRESENT since we are no longer buffering
     this.#presence = PlayerPresence.PRESENT;
 
@@ -1094,6 +1172,12 @@ export class IterablePlayer implements Player {
 
   async #stateClose() {
     this.#isPlaying = false;
+    // Clean up ROS resources
+    if (this.#enableRosPublishing && this.#rosPublisher) {
+      await this.#rosPublisher.shutdown();
+      this.#rosPublisher = undefined;
+    }
+
     await this.#blockLoader?.stopLoading();
     await this.#blockLoadingProcess;
     await this.#bufferedSource.stopProducer();
@@ -1123,5 +1207,57 @@ export class IterablePlayer implements Player {
         this.#queueEmitState();
       },
     });
+  }
+
+  async #initializeRosPublishing(): Promise<void> {
+    console.debug("[Player] Initializing ROS publishing");
+    if (!this.#enableRosPublishing) {
+      console.debug("[Player] ROS publishing not enabled");
+      return;
+    }
+
+    try {
+      const { createRosPublisher } = await import("@lichtblick/suite-base/players/IterablePlayer/rosPublisher/RosPublisherFactory");
+      this.#rosPublisher = await createRosPublisher();
+      await this.#rosPublisher.initialize(this.#rosMasterUri);
+
+      log.info(`ROS publisher initialized. Connected to ${this.#rosMasterUri}`);
+      console.debug("[Player] ROS publisher initialized, connected to", this.#rosMasterUri);
+    } catch (error) {
+      log.error("Failed to initialize ROS publishing:", error);
+      console.debug("[Player] Failed to initialize ROS publishing:", error);
+      this.#problemManager.addProblem("ros-publish-init", {
+        severity: "error",
+        message: "Failed to initialize ROS publishing",
+        error: error as Error,
+      });
+    }
+  }
+  async #setupRosPublishers(): Promise<void> {
+    if (!this.#enableRosPublishing || !this.#rosPublisher || !this.#providerTopics) {
+      console.debug("[Player] ROS publishing not enabled or ROS node not initialized");
+      return;
+    }
+
+    // Skip known problematic topics that often cause MD5 checksum mismatches
+    const skipTopics = new Set<string>(["/rosout", "/rosout_agg"]);
+
+    // Filter out problematic topics before deciding what to publish
+    const availableTopics = this.#providerTopics.filter(topic => !skipTopics.has(topic.name));
+
+    const topicsToPublish = this.#publishTopics?.length
+      ? availableTopics.filter(topic => this.#publishTopics!.includes(topic.name))
+      : availableTopics;
+
+    await this.#rosPublisher.setupPublishers(topicsToPublish);
+  }
+
+  #publishMessageToRos(messageEvent: MessageEvent): void {
+    if (!this.#enableRosPublishing || !this.#rosPublisher) {
+      console.debug("[Player] ROS publishing not enabled or ROS node not initialized");
+      return;
+    }
+
+    this.#rosPublisher.publishMessage(messageEvent);
   }
 }

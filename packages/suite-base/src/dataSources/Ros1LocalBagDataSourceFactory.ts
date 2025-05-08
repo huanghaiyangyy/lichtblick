@@ -14,6 +14,8 @@ import {
   WorkerIterableSource,
 } from "@lichtblick/suite-base/players/IterablePlayer";
 import { Player } from "@lichtblick/suite-base/players/types";
+import { RosNode } from "@lichtblick/ros1";
+import OsContextSingleton from "@lichtblick/suite-base/OsContextSingleton";
 
 class Ros1LocalBagDataSourceFactory implements IDataSourceFactory {
   public id = "ros1-local-bagfile";
@@ -21,6 +23,34 @@ class Ros1LocalBagDataSourceFactory implements IDataSourceFactory {
   public displayName = "ROS 1 Bag";
   public iconName: IDataSourceFactory["iconName"] = "OpenFile";
   public supportedFileTypes = [".bag"];
+
+  public formConfig = {
+    fields: [
+      {
+        id: "enableRosPublishing",
+        label: "Publish to ROS network",
+        defaultValue: "true",
+      },
+      {
+        id: "rosMasterUri",
+        label: "ROS_MASTER_URI",
+        defaultValue: OsContextSingleton?.getEnvVar("ROS_MASTER_URI") ?? "http://localhost:11311",
+        description: "Tells ROS nodes where they can locate the master",
+      },
+      {
+        id: "rosHostname",
+        label: "ROS_HOSTNAME",
+        defaultValue: OsContextSingleton
+          ? RosNode.GetRosHostname(
+              OsContextSingleton.getEnvVar,
+              OsContextSingleton.getHostname,
+              OsContextSingleton.getNetworkInterfaces,
+            )
+          : "localhost",
+        description: "Acts as the declared network address of a ROS node or tool",
+      },
+    ],
+  };
 
   public initialize(args: DataSourceFactoryInitializeArgs): Player | undefined {
     const file = args.file;
@@ -46,6 +76,9 @@ class Ros1LocalBagDataSourceFactory implements IDataSourceFactory {
       source,
       name: file.name,
       sourceId: this.id,
+      enableRosPublishing: true, //args.params?.enableRosPublishing === "true",
+      rosMasterUri: args.params?.rosMasterUri as string | undefined,
+      rosHostname: args.params?.rosHostname as string | undefined,
     });
   }
 }
