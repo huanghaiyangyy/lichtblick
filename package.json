@@ -139,6 +139,7 @@
     "webpack-hot-middleware": "2.26.0"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "18.0.1",
     "@lichtblick/hooks": "workspace:*",
     "@lichtblick/log": "workspace:*",
     "@lichtblick/omgidl-parser": "1.0.0",

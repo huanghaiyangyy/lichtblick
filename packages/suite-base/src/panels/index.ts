@@ -127,6 +127,14 @@ export const getBuiltin: (t: TFunction<"panels">) => PanelInfo[] = (t) => [
     hasCustomToolbar: true,
   },
   {
+    title: t("rawMessageList"),
+    type: "RawMessageList",
+    description: t("rawMessageListDescription"),
+    thumbnail: rawMessagesThumbnail,
+    module: async () => await import("./RawMessageList"),
+    hasCustomToolbar: true,
+  },
+  {
     title: t("log"),
     type: "RosOut",
     description: t("logDescription"),
