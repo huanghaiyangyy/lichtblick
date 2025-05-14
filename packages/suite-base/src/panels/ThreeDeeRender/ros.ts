@@ -129,6 +129,20 @@ export type TransformStamped = {
 
 export type TFMessage = { transforms: TransformStamped[] };
 
+/** nav_msgs/Odometry Data type */
+export type OdomMessage = {
+  header: Header;
+  child_frame_id: string;
+  pose: PoseWithCovariance;
+  twist: {
+    twist: {
+      linear: Vector3;
+      angular: Vector3;
+    };
+    covariance: Matrix6;
+  }
+}
+
 export type Marker = {
   header: Header;
   ns: string;

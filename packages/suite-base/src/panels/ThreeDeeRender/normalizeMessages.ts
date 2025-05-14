@@ -20,6 +20,7 @@ import {
   Transform,
   TransformStamped,
   Vector3,
+  OdomMessage,
 } from "./ros";
 import type { Pose } from "./transforms";
 
@@ -147,6 +148,13 @@ export function normalizePose(pose: PartialMessage<Pose> | undefined): Pose {
   };
 }
 
+export function normalizeTwist(twist: PartialMessage<any> | undefined): any {
+  return {
+    linear: normalizeVector3(twist?.linear),
+    angular: normalizeVector3(twist?.angular),
+  };
+}
+
 export function normalizeHeader(header: PartialMessage<Header> | undefined): Header {
   return {
     frame_id: header?.frame_id ?? "",
@@ -200,6 +208,21 @@ export function normalizeFrameTransforms(
 ): FrameTransforms {
   return {
     transforms: (frameTransforms?.transforms ?? []).map(normalizeFrameTransform),
+  };
+}
+
+export function normalizeOdomMessage(OdomMessage: PartialMessage<OdomMessage> | undefined): OdomMessage {
+  return {
+    header: normalizeHeader(OdomMessage?.header),
+    child_frame_id: OdomMessage?.child_frame_id ?? "",
+    pose: {
+      pose: normalizePose(OdomMessage?.pose?.pose),
+      covariance: normalizeMatrix6(OdomMessage?.pose?.covariance as number[] | undefined),
+    },
+    twist: {
+      twist: normalizeTwist(OdomMessage?.twist?.twist),
+      covariance: normalizeMatrix6(OdomMessage?.twist?.covariance as number[] | undefined),
+    },
   };
 }
 

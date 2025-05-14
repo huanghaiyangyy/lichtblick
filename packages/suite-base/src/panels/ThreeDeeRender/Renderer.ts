@@ -69,6 +69,7 @@ import {
   normalizeFrameTransforms,
   normalizeTFMessage,
   normalizeTransformStamped,
+  normalizeOdomMessage,
 } from "./normalizeMessages";
 import { CameraStateSettings } from "./renderables/CameraStateSettings";
 import { ImageMode } from "./renderables/ImageMode/ImageMode";
@@ -84,6 +85,7 @@ import {
   TRANSFORM_STAMPED_DATATYPES,
   TransformStamped,
   Vector3,
+  OdomMessage,
 } from "./ros";
 import { SelectEntry } from "./settings";
 import {
@@ -683,6 +685,11 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     });
     this.#addSchemaSubscriptions(TRANSFORM_STAMPED_DATATYPES, {
       handler: this.#handleTransformStamped,
+      shouldSubscribe: () => true,
+      preload: preloadTransforms,
+    });
+    this.#addTopicSubscription("/vehicle_odom", {
+      handler: this.#handleOdometryTopic,
       shouldSubscribe: () => true,
       preload: preloadTransforms,
     });
@@ -1370,6 +1377,22 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
     // geometry_msgs/TransformStamped - Ingest this single transform into our TF tree
     const tf = normalizeTransformStamped(message);
     this.#addTransformMessage(tf);
+  };
+
+  #handleOdometryTopic = ({ message }: MessageEvent<DeepPartial<OdomMessage>>): void => {
+    // nav_msgs/Odometry - Ingest this single odometry message into our TF tree
+    const odom = normalizeOdomMessage(message);
+    if (odom) {
+      const tf = {
+        header: odom.header,
+        child_frame_id: "vehicle_odom",
+        transform: {
+          translation: odom.pose.pose.position,
+          rotation: odom.pose.pose.orientation,
+        },
+      } as TransformStamped;
+      this.#addTransformMessage(tf);
+    }
   };
 
   #handleTopicsAction = (action: SettingsTreeAction): void => {
