@@ -55,6 +55,7 @@ import {
   StudioLogsSettings,
   StudioLogsSettingsSidebar,
 } from "@lichtblick/suite-base/components/StudioLogsSettings";
+import { DebugConsole } from "@lichtblick/suite-base/components/DebugConsole";
 import { SyncAdapters } from "@lichtblick/suite-base/components/SyncAdapters";
 import { TopicList } from "@lichtblick/suite-base/components/TopicList";
 import VariablesList from "@lichtblick/suite-base/components/VariablesList";
@@ -491,6 +492,10 @@ function WorkspaceContent(props: WorkspaceProps): React.JSX.Element {
         component: EventsList,
       });
     }
+    items.set("debug-console", {
+      title: t("workspace:debugConsole"),
+      component: DebugConsole,
+    });
     return items;
   }, [enableDebugMode, showEventsTab, PerformanceSidebarComponent]);
 

@@ -13,4 +13,5 @@ export const workspace = {
   studioLogs: "Logs",
   topics: "Topics",
   variables: "Variables",
+  debugConsole: "Debug Console",
 };
