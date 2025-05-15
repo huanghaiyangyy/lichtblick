@@ -1,0 +1,29 @@
+syntax = "proto2";
+import "header.proto";
+
+package apa.parking;
+
+
+message ParkingSlot {
+  optional int32 slot_available = 1;  // int8改为int32
+  optional int32 slot_id = 2;
+  optional float ps_x = 3;
+  optional float ps_y = 4;
+  optional float pe_x = 5;
+  optional float pe_y = 6;
+  optional float ps_inside_x = 7;
+  optional float ps_inside_y = 8;
+  optional float pe_inside_x = 9;
+  optional float pe_inside_y = 10;
+  optional float width = 11;
+  optional float length = 12;
+  optional int32 angle_type = 13;  // int8改为int32
+  optional float line_angle = 14;
+}
+
+message ParkingSlotList {
+  optional apa.common.Header header = 1;
+  repeated ParkingSlot parking_slots = 2;
+  optional int32 selected_slot_id = 3;  // int8升级为int32
+  optional int32 is_leftside_parking = 4;
+}

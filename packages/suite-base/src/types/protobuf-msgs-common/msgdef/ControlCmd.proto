@@ -1,0 +1,34 @@
+syntax = "proto2";
+import "header.proto";
+package apa.control;
+
+message ControlCmd {
+  optional apa.common.Header header = 1;
+
+  // 0. <= throttle <= 1.
+  optional float throttle = 2;
+
+  // -1. <= steer <= 1.
+  optional float steer = 3;       
+
+  // 0. <= brake <= 1.
+  optional float brake = 4;
+
+  // hand_brake 0 or 1
+  optional bool hand_brake = 5;   
+
+  // reverse 0 or 1
+  optional bool reverse = 6;    
+  optional int32 gear = 7;         
+  optional bool manual_gear_shift = 8; 
+  optional float acceleration = 9; 
+
+  // target yaw_rate
+  optional float yaw_rate = 10;    
+
+  // target velocity
+  optional float velocity = 11;     
+
+  optional float kappa = 12;      
+  optional bool control_active = 13; 
+}

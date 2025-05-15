@@ -1,0 +1,12 @@
+syntax = "proto2";
+import "header.proto";
+import "geometry.proto";
+
+package apa.navigation;
+
+message Odometry {
+  optional apa.common.Header header = 1;
+  optional string child_frame_id = 2;
+  optional apa.geometry.PoseWithCovariance pose = 3;
+  optional apa.geometry.TwistWithCovariance twist = 4;
+}

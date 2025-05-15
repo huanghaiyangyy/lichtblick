@@ -56,6 +56,16 @@ import rosDatatypesToMessageDefinition from "@lichtblick/suite-base/util/rosData
 import { JsonMessageWriter } from "./JsonMessageWriter";
 import { MessageWriter } from "./MessageWriter";
 import WorkerSocketAdapter from "./WorkerSocketAdapter";
+import * as protobufjs from "protobufjs";
+import { ProtoJsonSchemas } from "@lichtblick/suite-base/types/protobuf-msgs-common/dist/proto_json_schemas";
+
+function serializeProtobufMessage(message: any, schemaName: string, schemas: any): Uint8Array {
+  // 在线转换的方式，用 protobufjs 把 JS对象 （json）编码为 protobuf 格式
+  const root = protobufjs.Root.fromJSON(schemas);
+  const type = root.lookupType(schemaName);
+  const protoMessage = type.create(message);
+  return type.encode(protoMessage).finish(); // Returns Uint8Array
+}
 
 const log = Log.getLogger(__dirname);
 const textEncoder = new TextEncoder();
@@ -68,7 +78,7 @@ const ZERO_TIME = Object.freeze({ sec: 0, nsec: 0 });
 const GET_ALL_PARAMS_REQUEST_ID = "get-all-params";
 const GET_ALL_PARAMS_PERIOD_MS = 15000;
 const ROS_ENCODINGS = ["ros1", "cdr"];
-const SUPPORTED_PUBLICATION_ENCODINGS = ["json", ...ROS_ENCODINGS];
+const SUPPORTED_PUBLICATION_ENCODINGS = ["json", "protobuf", ...ROS_ENCODINGS];
 const FALLBACK_PUBLICATION_ENCODING = "json";
 const SUPPORTED_SERVICE_ENCODINGS = ["json", ...ROS_ENCODINGS];
 
@@ -223,7 +233,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
       this.#resolvedSubscriptionsByTopic.clear();
 
       // Re-assign members that are emitted as player state
-      this.#profile = undefined;
+      this.#profile = "protobuf";
       this.#publishedTopics = undefined;
       this.#subscribedTopics = undefined;
       this.#advertisedServices = undefined;
@@ -867,6 +877,15 @@ export default class FoxgloveWebSocketPlayer implements Player {
     this.#emitState();
   }
 
+  #getProtobufSchemas(): any {
+    // Create a root object with the necessary protobuf definitions
+    // This should be structured for protobufjs.Root.fromJSON()
+    const schemas = ProtoJsonSchemas;
+
+    log.debug("Using protobuf schema:", schemas);
+    return schemas;
+  }
+
   // Potentially performance-sensitive; await can be expensive
   // eslint-disable-next-line @typescript-eslint/promise-function-async
   #emitState = debouncePromise(() => {
@@ -1100,6 +1119,12 @@ export default class FoxgloveWebSocketPlayer implements Player {
           : value;
       };
       const message = Buffer.from(JSON.stringify(msg, replacer) ?? "");
+      this.#client.sendMessage(clientChannel.id, message);
+    } else if (clientChannel.encoding === "protobuf") {
+      const schemas = this.#getProtobufSchemas();
+      console.debug("[Publish] clientChannel", clientChannel);
+      const message = serializeProtobufMessage(msg, clientChannel.schemaName, schemas);
+      console.debug("[Publish] message", message);
       this.#client.sendMessage(clientChannel.id, message);
     } else if (
       ROS_ENCODINGS.includes(clientChannel.encoding) &&

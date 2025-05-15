@@ -52,6 +52,7 @@ import { CameraState, DEFAULT_CAMERA_STATE, PARKING_MODE_VIEW_3D, PARKING_MODE_V
 import {
   PublishRos1Datatypes,
   PublishRos2Datatypes,
+  PublishProtobufDatatypes,
   makePointMessage,
   makePoseEstimateMessage,
   makePoseMessage,
@@ -65,6 +66,46 @@ import { InterfaceMode } from "./types";
 import { TopicAdvertisementManager } from "@lichtblick/suite-base/panels/ThreeDeeRender/TopicAdvertisementManager";
 
 const log = Logger.getLogger(__filename);
+
+const SCHEMA_MAP = {
+  ros1:{
+    "clicked_point": "geometry_msgs/PointStamped",
+    "clicked_pose": "geometry_msgs/PoseStamped",
+    "clicked_pose_estimate": "geometry_msgs/PoseWithCovarianceStamped",
+    "/control_switch": "std_msgs/Int32",
+    "/park_out_type": "std_msgs/String",
+    "/parking_head_in": "std_msgs/Int32",
+    "/record_trace": "std_msgs/Int32",
+
+  },
+  ros2:{
+    "clicked_point": "geometry_msgs/msg/PointStamped",
+    "clicked_pose": "geometry_msgs/msg/PoseStamped",
+    "clicked_pose_estimate": "geometry_msgs/msg/PoseWithCovarianceStamped",
+    "/control_switch": "std_msgs/msg/Int32",
+    "/park_out_type": "std_msgs/msg/String",
+    "/parking_head_in": "std_msgs/msg/Int32",
+    "/record_trace": "std_msgs/msg/Int32",
+  },
+  protobuf:{
+    "clicked_point": "apa.geometry.PointStamped",
+    "clicked_pose": "apa.geometry.PoseStamped",
+    "clicked_pose_estimate": "apa.geometry.PoseWithCovarianceStamped",
+    "/control_switch": "std_msgs.Int32",
+    "/park_out_type": "std_msgs.String",
+    "/parking_head_in": "std_msgs.Int32",
+    "/record_trace": "std_msgs.Int32",
+  },
+  default: {
+    "clicked_point": "geometry_msgs/PointStamped",
+    "clicked_pose": "geometry_msgs/PoseStamped",
+    "clicked_pose_estimate": "geometry_msgs/PoseWithCovarianceStamped",
+    "/control_switch": "std_msgs/Int32",
+    "/park_out_type": "std_msgs/String",
+    "/parking_head_in": "std_msgs/Int32",
+    "/record_trace": "std_msgs/Int32",
+  },
+};
 
 type Shared3DPanelState = {
   cameraState: CameraState;
@@ -719,14 +760,22 @@ export function ThreeDeeRender(props: {
   const topicManager = useMemo(() => TopicAdvertisementManager.getInstance(), []);
   useEffect(() => {
     const datatypes =
-      context.dataSourceProfile === "ros2" ? PublishRos2Datatypes : PublishRos1Datatypes;
-    topicManager.advertise(context, publishTopics.goal, "geometry_msgs/PoseStamped", { datatypes });
-    topicManager.advertise(context, publishTopics.point, "geometry_msgs/PointStamped", { datatypes });
-    topicManager.advertise(context, publishTopics.pose, "geometry_msgs/PoseWithCovarianceStamped", { datatypes });
-    topicManager.advertise(context, "/control_switch", "std_msgs/Int32", { datatypes });
-    topicManager.advertise(context, "/park_out_type", "std_msgs/String", { datatypes });
-    topicManager.advertise(context, "/parking_head_in", "std_msgs/Int32", { datatypes });
-    topicManager.advertise(context, "/record_trace", "std_msgs/Int32", { datatypes });
+      context.dataSourceProfile === "ros2" ? PublishRos2Datatypes :
+      context.dataSourceProfile === "ros1" ? PublishRos1Datatypes :
+      context.dataSourceProfile === "protobuf" ? PublishProtobufDatatypes :
+      undefined;
+
+    const schemaKey = (context.dataSourceProfile === "ros1" || context.dataSourceProfile === "ros2" || context.dataSourceProfile === "protobuf")
+      ? context.dataSourceProfile
+      : "default";
+
+    topicManager.advertise(context, publishTopics.goal, SCHEMA_MAP[schemaKey]["clicked_pose"], { datatypes });
+    topicManager.advertise(context, publishTopics.point, SCHEMA_MAP[schemaKey]["clicked_point"], { datatypes });
+    topicManager.advertise(context, publishTopics.pose, SCHEMA_MAP[schemaKey]["clicked_pose_estimate"], { datatypes });
+    topicManager.advertise(context, "/control_switch", SCHEMA_MAP[schemaKey]["/control_switch"], { datatypes });
+    topicManager.advertise(context, "/park_out_type", SCHEMA_MAP[schemaKey]["/park_out_type"], { datatypes });
+    topicManager.advertise(context, "/parking_head_in", SCHEMA_MAP[schemaKey]["/parking_head_in"], { datatypes });
+    topicManager.advertise(context, "/record_trace", SCHEMA_MAP[schemaKey]["/record_trace"], { datatypes });
 
     return () => {
       topicManager.unadvertise(context, publishTopics.goal);
@@ -760,7 +809,9 @@ export function ThreeDeeRender(props: {
         log.error("Data source does not support publishing");
         return;
       }
-      if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
+      if (context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf") {
         log.warn("Publishing is only supported in ros1 and ros2");
         return;
       }
@@ -768,6 +819,7 @@ export function ThreeDeeRender(props: {
       try {
         switch (event.publishClickType) {
           case "point": {
+            console.debug("[Publish] trying to publish clicking point.");
             let point = pointTransform(event.point, renderFrameId, publishFrameId, renderer);
             const message = makePointMessage(point, publishFrameId);
             context.publish(publishTopics.point, message);
@@ -829,15 +881,20 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("data source type: ", context.dataSourceProfile)
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
       data: 2,
     };
-    context.publish("/control_switch", message);
+    try{
+      context.publish("/control_switch", message);
+    } catch (error) {
+      console.error("[Publish] Error publishing message:", error);
+    }
   }, [context]);
 
   const onClickStopButton = useCallback(() => {
@@ -845,8 +902,10 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
@@ -860,8 +919,10 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
@@ -875,8 +936,10 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
@@ -890,8 +953,10 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
@@ -905,8 +970,10 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
@@ -920,8 +987,10 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
@@ -935,8 +1004,10 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" && context.dataSourceProfile !== "ros2") {
-      log.warn("Publishing is only supported in ros1 and ros2");
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
     const message = {
@@ -1040,7 +1111,7 @@ export function ThreeDeeRender(props: {
 
   // The 3d panel only supports publishing to ros1 and ros2 data sources
   const isRosDataSource =
-    context.dataSourceProfile === "ros1" || context.dataSourceProfile === "ros2";
+    context.dataSourceProfile === "ros1" || context.dataSourceProfile === "ros2" || context.dataSourceProfile === "protobuf";
   const canPublish = context.publish != undefined && isRosDataSource;
 
   return (

@@ -1,0 +1,17 @@
+syntax = "proto2";
+import "header.proto";
+package apa.control;
+
+message Chassis {
+  optional apa.common.Header header = 1;
+  optional int32 xbw_lat_status = 2; 
+  optional int32 xbw_lon_status = 3;
+  optional string control_status = 4; 
+  optional float current_speed_kph = 5; 
+  optional int32 current_gear = 6;
+  optional int32 control_active = 7; 
+  optional float current_steer_kappa = 8; 
+  optional float current_acc = 9;  
+  optional float throttle = 10; 
+  optional float brake = 11; 
+}

@@ -1,0 +1,53 @@
+syntax = "proto2";
+import "header.proto";
+
+package apa.geometry;
+
+message Point {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+}
+
+message Quaternion {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+  optional double w = 4;
+}
+
+message Pose {
+  optional Point position = 1;
+  optional Quaternion orientation = 2;
+}
+
+message PoseWithCovariance {
+  optional Pose pose = 1;
+  repeated double covariance = 2 [packed=true]; // 36 elements
+}
+
+message Twist {
+  optional Vector3 linear = 1;
+  optional Vector3 angular = 2;
+}
+
+message TwistWithCovariance {
+  optional Twist twist = 1;
+  repeated double covariance = 2 [packed=true]; // 36 elements
+}
+
+message Vector3 {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+}
+
+message PointStamped {
+  optional apa.common.Header header = 1;
+  optional Point point = 2;
+}
+
+message PoseStamped {
+  optional apa.common.Header header = 1;
+  optional Pose pose = 2;
+}

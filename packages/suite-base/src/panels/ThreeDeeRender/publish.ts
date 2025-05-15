@@ -47,6 +47,18 @@ export const PublishRos2Datatypes = new Map<string, MessageDefinition>(
   ).map((type) => [type, ros2galactic[type]]),
 );
 
+export const PublishProtobufDatatypes = new Map<string, MessageDefinition>([
+  [
+    "control_proto.ControlSwitch",
+    {
+      name: "control_proto.ControlSwitch",
+      definitions: [
+        { type: "int32", name: "data", isArray: false, isComplex: false },
+      ],
+    },
+  ],
+]);
+
 export function makePointMessage(point: Point, frameId: string): unknown {
   const time = fromDate(new Date());
   return {
