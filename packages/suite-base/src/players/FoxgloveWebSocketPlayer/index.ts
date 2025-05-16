@@ -233,7 +233,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
       this.#resolvedSubscriptionsByTopic.clear();
 
       // Re-assign members that are emitted as player state
-      this.#profile = "protobuf";
+      this.#profile = undefined;
       this.#publishedTopics = undefined;
       this.#subscribedTopics = undefined;
       this.#advertisedServices = undefined;
@@ -337,6 +337,11 @@ export default class FoxgloveWebSocketPlayer implements Player {
           dataTypes.set(dataType, msgDef);
         }
         this.#updateDataTypes(dataTypes);
+      }
+
+      const supportProtoEncoding = event.supportedEncodings?.includes("protobuf");
+      if (supportProtoEncoding && !maybeRosDistro) {
+        this.#profile = "protobuf";
       }
 
       if (event.capabilities.includes(ServerCapability.clientPublish)) {
