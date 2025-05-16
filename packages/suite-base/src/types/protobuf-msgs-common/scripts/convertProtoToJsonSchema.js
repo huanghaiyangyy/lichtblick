@@ -5,7 +5,13 @@ const protobufjs = require('protobufjs');
 // Directory containing proto files
 const PROTO_DIR = path.join(__dirname, '../msgdef');
 // Output file path
+const OUTPUT_DIR = path.join(__dirname, '../dist');
 const OUTPUT_PATH = path.join(__dirname, '../dist/proto_json_schemas.ts');
+
+// Check if output directory exists, if not create it
+if (!fs.existsSync(OUTPUT_DIR)) {
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+}
 
 async function convertProtosToJsonSchema() {
   // Load all proto files in the directory
