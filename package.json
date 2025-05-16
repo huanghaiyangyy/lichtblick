@@ -53,9 +53,7 @@
     "release:bump-nightly-version": "node -r ts-node/register ./ci/bump-nightly-version.ts",
     "storybook": "storybook dev --port 9009 --config-dir .storybook",
     "storybook:build": "storybook build --config-dir .storybook --webpack-stats-json",
-    "generate-proto-schemas": "node ./packages/suite-base/src/types/protobuf-msgs-common/scripts/convertProtoToJsonSchema.js",
-    "convert-schemas-to-definitions": "node ./packages/suite-base/src/types/protobuf-msgs-common/scripts/convertSchemaToDefinitions.js",
-    "generate-proto-definitions": "yarn generate-proto-schemas && yarn convert-schemas-to-definitions",
+    "generate-proto-definitions": "yarn workspace @lichtblick/protobuf-support generate-proto-definitions",
     "version:all": "yarn workspaces foreach version"
   },
   "workspaces": {

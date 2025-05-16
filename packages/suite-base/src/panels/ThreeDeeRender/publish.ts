@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 import { MessageDefinition } from "@lichtblick/message-definition";
 import { ros1, ros2galactic } from "@lichtblick/rosmsg-msgs-common";
+import { PublishProtoDataTypes } from "@lichtblick/protobuf-support";
 import { fromDate } from "@lichtblick/rostime";
 import { Point, makeCovarianceArray } from "@lichtblick/suite-base/util/geometry";
 
@@ -47,17 +48,7 @@ export const PublishRos2Datatypes = new Map<string, MessageDefinition>(
   ).map((type) => [type, ros2galactic[type]]),
 );
 
-export const PublishProtobufDatatypes = new Map<string, MessageDefinition>([
-  [
-    "control_proto.ControlSwitch",
-    {
-      name: "control_proto.ControlSwitch",
-      definitions: [
-        { type: "int32", name: "data", isArray: false, isComplex: false },
-      ],
-    },
-  ],
-]);
+export const PublishProtoDatatypes = PublishProtoDataTypes;
 
 export function makePointMessage(point: Point, frameId: string): unknown {
   const time = fromDate(new Date());

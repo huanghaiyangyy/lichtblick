@@ -52,7 +52,7 @@ import { CameraState, DEFAULT_CAMERA_STATE, PARKING_MODE_VIEW_3D, PARKING_MODE_V
 import {
   PublishRos1Datatypes,
   PublishRos2Datatypes,
-  PublishProtobufDatatypes,
+  PublishProtoDatatypes,
   makePointMessage,
   makePoseEstimateMessage,
   makePoseMessage,
@@ -762,7 +762,7 @@ export function ThreeDeeRender(props: {
     const datatypes =
       context.dataSourceProfile === "ros2" ? PublishRos2Datatypes :
       context.dataSourceProfile === "ros1" ? PublishRos1Datatypes :
-      context.dataSourceProfile === "protobuf" ? PublishProtobufDatatypes :
+      context.dataSourceProfile === "protobuf" ? PublishProtoDatatypes :
       undefined;
 
     const schemaKey = (context.dataSourceProfile === "ros1" || context.dataSourceProfile === "ros2" || context.dataSourceProfile === "protobuf")

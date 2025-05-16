@@ -1,0 +1,24 @@
+{
+  "name": "@lichtblick/protobuf-support",
+  "version": "1.0.0",
+  "description": "Common schema and message parsing logic for use with Protobuf",
+  "author": {
+    "name": "ShenYuzhe",
+    "email": "yuzhe.shen@faw-vw.com"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "generate-proto-schemas": "node src/protobuf-msgs-common/scripts/convertProtoToJsonSchema.js",
+    "convert-schemas-to-definitions": "node src/protobuf-msgs-common/scripts/convertSchemaToDefinitions.js",
+    "generate-proto-definitions": "yarn generate-proto-schemas && yarn convert-schemas-to-definitions",
+    "prepack": "yarn generate-proto-definitions && tsc -b"
+  },
+  "devDependencies": {
+    "@lichtblick/tsconfig": "1.0.0",
+    "@types/protobufjs": "workspace:*",
+    "typescript": "5.3.3"
+  }
+}
