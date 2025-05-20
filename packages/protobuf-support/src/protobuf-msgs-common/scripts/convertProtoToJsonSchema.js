@@ -13,14 +13,71 @@ if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-async function convertProtosToJsonSchema() {
-  // Load all proto files in the directory
-  const protoFiles = fs.readdirSync(PROTO_DIR)
-    .filter(file => file.endsWith('.proto'))
-    .map(file => path.join(PROTO_DIR, file));
+// Function to recursively find all .proto files in a directory and its subdirectories
+function findProtoFiles(dir) {
+  let results = [];
+  const items = fs.readdirSync(dir);
 
-  // Create a new protobuf root and load all proto files
+  for (const item of items) {
+    const itemPath = path.join(dir, item);
+    const stat = fs.statSync(itemPath);
+
+    if (stat.isDirectory()) {
+      // Recursively search subdirectories
+      results = results.concat(findProtoFiles(itemPath));
+    } else if (item.endsWith('.proto')) {
+      // Add proto files to results
+      results.push(itemPath);
+    }
+  }
+
+  return results;
+}
+
+async function convertProtosToJsonSchema() {
+  // Recursively find all .proto files
+  const protoFiles = findProtoFiles(PROTO_DIR);
+
+  console.log(`Found ${protoFiles.length} .proto files`);
+
+  // Create a new protobuf root with include paths configured
   const root = new protobufjs.Root();
+
+  // Add the proto directory to include paths to handle imports properly
+  root.resolvePath = (origin, target) => {
+
+    // If target is already absolute, return it directly
+    if (path.isAbsolute(target)) {
+      return target;
+    }
+
+    // If origin is a file, get its directory
+    const directory = origin ? path.dirname(origin) : PROTO_DIR;
+
+    // Try direct resolution first
+    const resolved = path.resolve(directory, target);
+    if (fs.existsSync(resolved)) {
+      return resolved;
+    }
+
+    // Try resolving from the base proto directory
+    const fromRoot = path.resolve(PROTO_DIR, target);
+    if (fs.existsSync(fromRoot)) {
+      return fromRoot;
+    }
+
+    // Handle foxglove namespace special case
+    if (target.startsWith('foxglove/')) {
+      const foxglovePath = path.resolve(PROTO_DIR, 'foxglove_proto', target.replace('foxglove/', ''));
+      if (fs.existsSync(foxglovePath)) {
+        return foxglovePath;
+      }
+    }
+
+    console.warn(`Warning: Could not resolve import ${target}`);
+    return target;
+  };
+
   await Promise.all(protoFiles.map(file => root.load(file, { keepCase: true })));
 
   // Convert the loaded protos to JSON format

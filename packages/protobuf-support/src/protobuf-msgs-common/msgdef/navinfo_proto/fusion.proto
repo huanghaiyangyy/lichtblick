@@ -1,0 +1,290 @@
+syntax = "proto2";
+
+import "header.proto";
+import "geometry.proto";
+import "common.proto";
+import "odometry.proto";
+
+package davinci_adas.apa.fusion;
+
+enum MessageStatus {
+  MESSAGE_OK = 0;
+  MESSAGE_ABNORMAL = 1;
+  MESSAGE_UNKNOWN = 2;
+  MESSAGE_APA_PERCEPTION_OK = 1000;
+  MESSAGE_APA_PERCEPTION_FAILED = 1001;
+  MESSAGE_APA_PERCEPTION_INIT_FAILED = 1100;
+  MESSAGE_APA_PERCEPTION_INPUT_DATA_ERROR = 1101;
+  MESSAGE_APA_PERCEPTION_PARAMETER_LOAD_FAILED = 1102;
+  MESSAGE_APA_PERCEPTION_NO_INPUT_DATA = 1200;
+  MESSAGE_APA_PERCEPTION_IMAGE_DECODE_ERR = 1201;
+  MESSAGE_APA_PERCEPTION_SYS_NOT_ACTIVE = 1202;
+  MESSAGE_APA_PERCEPTION_FREESPACE_OK = 3000;
+  MESSAGE_APA_PERCEPTION_FREESPACE_ABNORMAL = 3001;
+  MESSAGE_APA_PERCEPTION_FREESPACE_UNKNOWN = 3002;
+  MESSAGE_APA_PERCEPTION_PARKING_SLOT_OK = 4000;
+  MESSAGE_APA_PERCEPTION_PARKING_SLOT_ABNORMAL = 4001;
+  MESSAGE_APA_PERCEPTION_PARKING_SLOT_UNKNOWN = 4002;
+  MESSAGE_ULTRASONIC_RADAR_OK = 5000;
+  MESSAGE_ULTRASONIC_RADAR_ABNORMAL = 5001;
+  MESSAGE_ULTRASONIC_RADAR_UNKNOWN = 5002;
+  MESSAGE_ULTRASONIC_SYS_INIT_FAILED = 5003;
+  MESSAGE_ULTRASONIC_SYS_NOT_ACTIVE = 5004;
+  MESSAGE_ULTRASONIC_PAS_ABNORMAL = 5100;
+  MESSAGE_ULTRASONIC_FLS_SENSOR_ABNORMAL = 5101;
+  MESSAGE_ULTRASONIC_FL_SENSOR_ABNORMAL = 5102;
+  MESSAGE_ULTRASONIC_FLM_SENSOR_ABNORMAL = 5103;
+  MESSAGE_ULTRASONIC_FRM_SENSOR_ABNORMAL = 5104;
+  MESSAGE_ULTRASONIC_FR_SENSOR_ABNORMAL = 5105;
+  MESSAGE_ULTRASONIC_FRS_SENSOR_ABNORMAL = 5106;
+  MESSAGE_ULTRASONIC_RLS_SENSOR_ABNORMAL = 5107;
+  MESSAGE_ULTRASONIC_RL_SENSOR_ABNORMAL = 5108;
+  MESSAGE_ULTRASONIC_RLM_SENSOR_ABNORMAL = 5109;
+  MESSAGE_ULTRASONIC_RRM_SENSOR_ABNORMAL = 5110;
+  MESSAGE_ULTRASONIC_RR_SENSOR_ABNORMAL = 5111;
+  MESSAGE_ULTRASONIC_RRS_SENSOR_ABNORMAL = 5112;
+  MESSAGE_ULTRASONIC_DATA_SYNC_ABNORMAL = 5200;
+  MESSAGE_ULTRASONIC_DATA_SYNC_INIT_FAILED = 5201;
+  MESSAGE_ULTRASONIC_DATA_SYNC_OBS_GROUP_FAILED = 5202;
+  MESSAGE_ULTRASONIC_DATA_SYNC_ULTR_RAW_DATA_FAILED = 5203;
+  MESSAGE_ULTRASONIC_DATA_SYNC_ODM_FAILED = 5204;
+  MESSAGE_ULTRASONIC_OBS_MAP_ABNORMAL = 5300;
+  MESSAGE_ULTRASONIC_OBS_MAP_INIT_FAILED = 5301;
+  MESSAGE_ULTRASONIC_OBS_CORRECTED_FAILED = 5302;
+  MESSAGE_ULTRASONIC_OBS_CLUSTER_FAILED = 5303;
+  MESSAGE_ULTRASONIC_OBS_MATCH_FAILED = 5304;
+  MESSAGE_ULTRASONIC_OBS_CONTOUR_FAILED = 5305;
+  MESSAGE_ULTRASONIC_OBS_FUSION_FAILED = 5306;
+  MESSAGE_ULTRASONIC_OBS_GROUP_ABNORMAL = 5400;
+  MESSAGE_ULTRASONIC_OBS_GROUP_INIT_FAILED = 5401;
+  MESSAGE_ULTRASONIC_OBS_GROUP_FAILED = 5402;
+  MESSAGE_ULTRASONIC_SLOT_ABNORMAL = 5500;
+  MESSAGE_ULTRASONIC_SLOT_INIT_FAILED = 5501;
+  MESSAGE_ULTRASONIC_SLOT_FAILED = 5502;
+  MESSAGE_ULTRASONIC_SLOT_VEH_SPEED_ABNORMAL = 5503;
+  MESSAGE_ULTRASONIC_SLOT_SIDE_DIS_ABNORMAL = 5504;
+  MESSAGE_ULTRASONIC_SLOT_CORNER_FAILED = 5505;
+  MESSAGE_ULTRASONIC_SLOT_LENGTH_FAILED = 5506;
+  MESSAGE_ULTRASONIC_SLOT_DEEPTH_FAILED = 5507;
+  MESSAGE_ODOMETRY_OK = 6000;
+  MESSAGE_ODOMETRY_ABNORMAL = 6001;
+  MESSAGE_ODOMETRY_UNKNOWN = 6002;
+  MESSAGE_FUSION_OK = 7000;
+  MESSAGE_FUSION_ABNORMAL = 7001;
+  MESSAGE_FUSION_SYS_INIT_FAILED = 7002;
+  MESSAGE_FUSION_SYS_IN_RESET_MODE = 7003;
+  MESSAGE_FUSION_SYS_NOT_ACTIVE = 7004;
+  MESSAGE_FUSION_SYNC_DATA_ABNORMAL = 7100;
+  MESSAGE_FUSION_SYNC_DATA_INIT_FAILED = 7101;
+  MESSAGE_FUSION_SLOT_TRACK_ABNORMAL = 7200;
+  MESSAGE_FUSION_SLOT_TRACK_INIT_FAILED = 7201;
+  MESSAGE_FUSION_SLOT_TRACK_FAILED = 7202;
+  MESSAGE_FUSION_SLOT_FUSION_ABNORMAL = 7300;
+  MESSAGE_FUSION_SLOT_FUSION_INIT_FAILED = 7301;
+  MESSAGE_FUSION_SLOT_FUSION_FAILED = 7302;
+  MESSAGE_FUSION_SLOT_FUSION_MATCH_FAILED = 7303;
+  MESSAGE_FUSION_SLOT_FUSION_INPUT_IMG_INVALID = 7304;
+  MESSAGE_FUSION_SLOT_FUSION_PARKINTO_INIT_FAILED = 7305;
+  MESSAGE_FUSION_SLOT_FUSION_PARKINTO_END_POSE_FAILED = 7306;
+  MESSAGE_FUSION_SLOT_FUSION_OCCUPIED_FAILED = 7307;
+  MESSAGE_FUSION_SLOT_FUSION_PARKINTO_INPUT_SLOT_INVALID = 7308;
+  MESSAGE_FUSION_SLOT_FUSION_ID_PERCEPTTYPE_FAILED = 7309;
+  MESSAGE_FUSION_SLOT_FUSION_JUDGE_TYPE_FAILED = 7310;
+  MESSAGE_FUSION_SLOT_FUSION_SLOT_LOCATION_MANAGE_FAILED = 7311;
+  MESSAGE_FUSION_SLOT_FUSION_GET_PHISYCAL_BOUND_FAILED = 7312;
+  MESSAGE_FUSION_SLOT_FUSION_JUDGE_PARK_MODE_FAILED = 7313;
+  MESSAGE_FUSION_SLOT_FUSION_PARK_END_SLOT_FAILED = 7314;
+  MESSAGE_FUSION_SLOT_FUSION_INPUT_MAP_INVALID = 7315;
+  MESSAGE_FUSION_SLOT_FUSION_OCR_FAILED = 7316;
+  MESSAGE_FUSION_SLOT_FUSION_END_SLOT_FAILED = 7317;
+  MESSAGE_FUSION_SLOT_FUSION_CORRIDOR_ACROSS_FAILED = 7318;
+  MESSAGE_FUSION_SLOT_FUSION_PARKOUT_FRONT_NO_OBS = 7319;
+  MESSAGE_FUSION_SLOT_FUSION_PARKOUT_LENGTH_NARROW_SPACE = 7320;
+  MESSAGE_FUSION_SLOT_FUSION_PARKOUT_WIDTH_NARROW_SPACE = 7321;
+  MESSAGE_FUSION_SLOT_FUSION_SLOT_LIFE_FAILED = 7322;
+  MESSAGE_FUSION_SLOT_FUSION_RECOMMEND_ORDER_FAILED = 7323;
+  MESSAGE_FUSION_SLOT_FUSION_STOPPER_TYPE_FAILED = 7324;
+  MESSAGE_FUSION_SLOT_FUSION_RELEASE_SPACE_FAILED = 7325;
+  MESSAGE_FUSION_SEMANTIC_MAP_ABNORMAL = 7400;
+  MESSAGE_FUSION_SEMANTIC_MAP_INIT_FAILED = 7401;
+  MESSAGE_FUSION_SEMANTIC_MAP_SERIALIZE_FAILED = 7402;
+  MESSAGE_FUSION_OBSTACLE_FUSION_ABNORMAL = 7500;
+  MESSAGE_FUSION_OBSTACLE_FUSION_INIT_FAILED = 7501;
+  MESSAGE_FUSION_OBSTACLE_MODULE_FAILED = 7502;
+  MESSAGE_FUSION_OBSTACLE_FUSION_MATCH_FAILED = 7503;
+  MESSAGE_FUSION_OBSTACLE_GET_CONTOURS_FAILED = 7504;
+  MESSAGE_FUSION_OBSTACLE_UPDATE_FAILED = 7506;
+  MESSAGE_FUSION_OBSTACLE_MANAGE_FAILED = 7507;
+  MESSAGE_FUSION_OBSTACLE_INVALID_FUSION_MAP = 7508;
+  MESSAGE_FUSION_OBSTACLE_GET_CACHE_FAILED = 7509;
+  MESSAGE_FUSION_APP_REQUEST_ABNORMAL = 7600;
+  MESSAGE_FUSION_APP_REQUEST_TIME_ABNORMAL = 7601;
+  MESSAGE_FUSION_APP_REQUEST_NO_NEED_TO_SWITCH = 7602;
+  MESSAGE_FUSION_APP_REQUEST_CHECK_MCU_FAILED = 7603;
+  MESSAGE_FUSION_APP_REQUEST_NO_TARGET_SLOT_ID = 7604;
+  MESSAGE_FUSION_APP_REQUEST_INVALID_TARGET_SLOT_ID = 7605;
+  MESSAGE_FUSION_APP_REQUEST_TO_TERMINATE = 7606;
+  MESSAGE_FUSION_APP_REQUEST_WORK_MODE_NOT_SUPPORT = 7607;
+  MESSAGE_FUSION_APP_REQUEST_RUNNING_STATUS_NOT_SUPPORT = 7608;
+  MESSAGE_FUSION_APP_REQUEST_WORK_MODE_NOT_MATCH = 7609;
+  MESSAGE_PNC_PATH_PLAN_FAILED = 8001;
+  MESSAGE_PNC_OBSTACLE_INTERRUPTED = 8002;
+  MESSAGE_PNC_OBSTACLE_REMOVED = 8003;
+  MESSAGE_PNC_PARKING_COMPLETED = 8004;
+  MESSAGE_PNC_PATH_PLAN_SUCCESS = 8005;
+  MESSAGE_PNC_REQUESTED_SLOT_NOT_EXIST = 8006;
+  MESSAGE_PNC_TARGET_SLOT_DIFF_TOO_LARGE = 8007;
+  MESSAGE_PNC_ODOM_ABNORMAL = 8008;
+}
+
+enum ParkingSlotType {
+  PARKING_SLOT_TYPE_UNKOWN = 0;
+  PARKING_SLOT_TYPE_PARALLEL = 1;
+  PARKING_SLOT_TYPE_VERTICAL = 2;
+  PARKING_SLOT_TYPE_OBLIQUE = 3;
+}
+enum ParkingToSide {
+  PARK_TO_LEFT = -1;
+  PARK_TO_UNKNOW = 0;
+  PARK_TO_RIGHT = 1;
+  PARK_TO_FRONT = 2;
+  PARK_TO_REAR = 3;
+  PARK_TO_FRONT_LEFT = 4;
+  PARK_TO_FRONT_RIGHT = 5;
+  PARK_TO_REAR_LEFT = 6;
+  PARK_TO_REAR_RIGHT = 7;
+}
+enum ParkingMode {
+  PARK_MODE_UNKOWN = 0;
+  PARK_INTO_PARALLEL_SLOT = 1;
+  PARK_TAIL_INTO_VERTICAL_SLOT = 2;
+  PARK_HEAD_INTO_OBLIQUE_SLOT = 3;
+  PARK_TAIL_INTO_OBLIQUE_SLOT = 4;
+  PARK_OUTOF_PARALLEL_SLOT = 5;
+  REMOTE_MOVE_VEHICLE_FARWARD = 6;
+  REMOTE_MOVE_VEHICLE_BACKWARD = 7;
+  PARK_HEAD_INTO_VERTICAL_SLOT = 8;
+  PARK_OUTOF_VERTICAL_SLOT = 9;
+  PARK_OUTOF_OBLIQUE_SLOT = 10;
+}
+enum SlotInsideType {
+  SLOT_INSIDE_UNKOWN = 0;
+  SLOT_NOTHING_INSIDE = 1;
+  SLOT_WALL_INSIDE = 2;
+  SLOT_ROADEDGE_INSIDE = 3;
+}
+enum PerceptionSource {
+  FROM_CAMERA = 0;
+  FROM_USS_SPACE = 1;
+  FROM_FREESPACE = 2;
+  FROM_SELECT = 3;
+}
+
+message LandMarkUncertainty {
+  optional double r_x = 1;
+  optional double r_y = 2;
+  optional double r_yaw = 3;
+}
+
+message ConvergeInfo {
+  optional float converge_to_measure_x = 1;
+  optional float converge_to_measure_y = 2;
+  optional float converge_to_measure_yaw = 3;
+  optional float converge_to_measure = 4;
+}
+
+message SlotObserveMessage {
+  optional ParkingSlotType slot_type = 1;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_img = 2;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_car = 3;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_odom = 4;
+  optional davinci_adas.apa.common.ParkingSlotLocation slot_origin = 5;
+  optional davinci_adas.apa.fusion.ConvergeInfo p0_converge_info = 6;
+  optional davinci_adas.apa.fusion.ConvergeInfo p1_converge_info = 7;
+  optional davinci_adas.apa.common.ParkingSlotPointsScore pts_score = 8;
+  optional davinci_adas.apa.common.ParkingSlotPointsScore edges_score = 9;
+  optional davinci_adas.apa.fusion.LandMarkUncertainty p0_noise = 10;
+  optional davinci_adas.apa.fusion.LandMarkUncertainty p1_noise = 11;
+}
+
+message FusionParkingSlotObject {
+  optional ParkingSlotType slot_type = 1;
+
+  optional uint32 slot_id = 2;
+  optional string ocr_id = 3;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_img = 4;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_car = 5;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_odom = 6;
+  optional davinci_adas.apa.common.ParkingSlotLocation slot_origin = 7;
+  optional ParkingToSide park_side = 8;
+
+  optional float slot_length = 9;
+  optional float slot_depth = 10;
+  optional float angle = 11;
+  optional davinci_adas.apa.common.FusionObstacleCategory p0_obs_type = 12;
+  optional davinci_adas.apa.geometry.Point2Df p0_obs_start = 13;
+  optional davinci_adas.apa.common.ParkingSlotLocation real_bound = 14;
+  optional davinci_adas.apa.geometry.Point2Df p1_obs_end = 15;
+  optional davinci_adas.apa.common.FusionObstacleCategory p1_obs_type = 16;
+  optional davinci_adas.apa.common.ObstacleObject corridor_across = 17;
+  optional davinci_adas.apa.common.ParkingSlotLocation park_end_slot = 18;
+  optional davinci_adas.apa.geometry.Pose park_end_pos = 19;
+  optional ParkingMode park_mode = 20;
+
+  optional davinci_adas.apa.geometry.Line stopper = 21;
+  optional SlotInsideType slot_inside_type = 22;
+
+  optional PerceptionSource slot_percept_type = 23;
+
+  optional int32 slot_recommend_priority = 24;
+  optional int32 l0_recommend_priority = 25;
+  optional int32 pnc_slot_recommend_priority = 26;
+  optional float pnc_slot_recommend_score = 27;
+  optional float slot_inside_line_conf = 28;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_ekf_odom = 29;
+  repeated davinci_adas.apa.fusion.SlotObserveMessage measurements = 30;
+  optional float distance_to_final_state = 31;
+  optional davinci_adas.apa.geometry.Pose park_end_pos_odom = 32;
+  optional davinci_adas.apa.fusion.LandMarkUncertainty p0_post_cov = 33;
+  optional davinci_adas.apa.fusion.LandMarkUncertainty p1_post_cov = 34;
+  optional davinci_adas.apa.geometry.Pose end_pos_conv = 35;
+  optional int32 pnc_line_slot_converge_status = 36;
+  optional davinci_adas.apa.common.ObstaclesAroundVehicle obs_around_vehicle =
+      37;
+}
+
+message FusionParkingSlotsInfo {
+  message ParkingSlotsEntry {
+    optional uint32 key = 1;
+    optional davinci_adas.apa.fusion.FusionParkingSlotObject value = 2;
+  }
+  optional apollo.common.Header header = 1;
+  repeated davinci_adas.apa.fusion.FusionParkingSlotsInfo.ParkingSlotsEntry
+      parking_slots = 2;
+  optional davinci_adas.apa.odometry.Odometry odom = 3;
+  optional MessageStatus msg_status = 4;
+}
+
+message FusionLocalObstaclesInfo {
+  optional apollo.common.Header header = 1;
+  message ObstaclesEntry {
+    optional uint32 key = 1;
+    optional davinci_adas.apa.common.ObstacleObject value = 2;
+  }
+  repeated davinci_adas.apa.fusion.FusionLocalObstaclesInfo.ObstaclesEntry
+      obstacles = 2;
+  optional davinci_adas.apa.odometry.Odometry odom = 3;
+  optional MessageStatus msg_status = 4;
+}
+
+message FusionLocalSemanticMapInfo {
+  optional apollo.common.Header header = 1;
+  optional davinci_adas.apa.common.SemanticMapInfo occupied_grid_map = 2;
+  optional davinci_adas.apa.odometry.Odometry odom = 4;
+  optional davinci_adas.apa.common.ImageParam map2car_param = 5;
+  optional davinci_adas.apa.common.ImageParam map2slot_param = 6;
+  optional davinci_adas.apa.common.ParkingSlotLocation slot_origin_in_map = 7;
+  optional MessageStatus msg_status = 8;
+  optional davinci_adas.apa.geometry.Line scanned_area_bound = 9;
+  repeated davinci_adas.apa.geometry.Polygon scanned_area = 10;
+}

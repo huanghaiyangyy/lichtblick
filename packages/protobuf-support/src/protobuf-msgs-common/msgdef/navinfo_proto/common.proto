@@ -1,0 +1,115 @@
+syntax = "proto2";
+
+import "geometry.proto";
+package davinci_adas.apa.common;
+
+message ParkingSlotPointsScore {
+  optional float p0_score = 1;
+  optional float p1_score = 2;
+  optional float p2_score = 3;
+  optional float p3_score = 4;
+}
+
+enum ImageType {
+  IMAGE_TYPE_RAW = 0;
+  IMAGE_TYPE_AVM = 1;
+  IMAGE_SEMANTIC_MAP = 2;
+  IMAGE_ULTRASONIC_MAP = 3;
+  IMAGE_FUSION_MAP = 4;
+  IMAGE_TYPE_UNKNOWM = 5;
+}
+
+enum ImageObstacleCategory {
+  SEG_FREESPACE = 0;
+  SEG_PERSON = 1;
+  SEG_WALL = 2;
+  SEG_CAR = 3;
+  SEG_OTHER = 4;
+  SEG_WHEELCHAIR = 5;
+  SEG_BABY_CARRIAGE = 6;
+  SEG_TRAFFIC_CONE = 7;
+  SEG_GROUND_LOCK_OPEN = 8;
+  SEG_ROADSIDE = 9;
+  SEG_PARKING_SPACE_LINE = 10;
+  SEG_ZEBRA_CROSSING = 11;
+  SEG_NO_STOP_LINE = 12;
+  SEG_WHEEL_STOPPER = 13;
+  SEG_DECELERATION_ZONE = 14;
+  SEG_LANELINE = 15;
+  SEG_FIRE_EXTINGUISHER = 16;
+  SEG_BACKGROUND = 17;
+  SEG_GROUND_LOCK_CLOSE = 18;
+  SEG_UNKNOWN = 199;
+}
+
+enum UltrObstacleCategory {
+  ULTRASONIC_FREESPACE = 200;
+  ULTRASONIC_SQUARE = 201;
+  ULTRASONIC_CIRCLE = 202;
+  ULTRASONIC_EDGE = 203;
+  ULTRASONIC_OTHER = 204;
+  ULTRASONIC_OTHER_AND_CIRCLE = 205;
+  ULTRASONIC_DELAYED_CIRCLE = 206;
+  ULTRASONIC_DISTANCE_CIRCLE = 207;
+  ULTRASONIC_DELAYED_DISTANCE_CIRCLE = 208;
+  ULTRASONIC_CIRCLE_PERSON = 209;
+  ULTRASONIC_DELAYED_CIRCLE_PERSON = 210;
+  ULTRASONIC_LOW_CONF_CIRCLE_COMMON = 211;
+  ULTRASONIC_CIRCLE_AISLE_CAR = 212;
+  ULTRASONIC_UNKNOWN = 255;
+}
+
+message ObstaclesAroundVehicle {
+  optional bool front_free = 1;
+  optional bool left_free = 2;
+  optional bool right_free = 3;
+}
+
+message ParkingSlotLocation {
+  optional davinci_adas.apa.geometry.Point2Df p0 = 1;
+  optional davinci_adas.apa.geometry.Point2Df p1 = 2;
+  optional davinci_adas.apa.geometry.Point2Df p2 = 3;
+  optional davinci_adas.apa.geometry.Point2Df p3 = 4;
+}
+
+message FusionObstacleCategory {
+  optional ImageObstacleCategory img_category = 1;
+
+  optional UltrObstacleCategory ultr_category = 2;
+}
+
+message ObstacleObject {
+  optional uint32 obs_id = 1;
+  optional float obs_score = 2;
+  optional davinci_adas.apa.common.FusionObstacleCategory obs_tag = 3;
+  optional davinci_adas.apa.geometry.Point2Df obs_closest_point = 4;
+  optional davinci_adas.apa.geometry.Point2Df obs_velocity = 5;
+  repeated davinci_adas.apa.geometry.Point2Df obs_points = 6;
+}
+
+message SemanticMapInfo {
+  optional bytes mask = 1;
+  optional bytes score = 2;
+  optional uint32 img_height = 3;
+  optional uint32 img_width = 4;
+  optional ImageType image_type = 5;
+}
+
+message ImageParam {
+  optional davinci_adas.apa.geometry.Pose physical_origin = 1;
+  optional davinci_adas.apa.geometry.Point2Df image2physical_scale = 2;
+}
+
+message ObjectPointLocation {
+  optional davinci_adas.apa.geometry.Point2Df p0 = 1;
+  optional davinci_adas.apa.geometry.Point2Df p1 = 2;
+  optional davinci_adas.apa.geometry.Point2Df p2 = 3;
+  optional davinci_adas.apa.geometry.Point2Df p3 = 4;
+}
+
+message ObjectPointPointsScore {
+  optional float p0_score = 1;
+  optional float p1_score = 2;
+  optional float p2_score = 3;
+  optional float p3_score = 4;
+}

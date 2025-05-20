@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+import "header.proto";
+import "avm_image.proto";
+
+package davinci_adas.avm.view2d;
+
+enum ImageType {
+  BIRD_VIEW = 0;
+  FISHEYE_VIEW = 1;
+  UNDISTORT_VIEW = 2;
+}
+enum AVM2dMessageStatus {
+  MESSAGE_AVM_2D_OK = 0;
+  MESSAGE_AVM_2D_PARAMS_ERR = 1;
+  MESSAGE_AVM_2D_MAPS_IO_ERR = 2;
+  MESSAGE_AVM_2D_INVALID_DATA_ERR = 3;
+}
+
+message RemapImage {
+  optional ImageType image_type = 1;
+  optional davinci_adas.avm.Image data = 2;
+  optional double measurement_time = 3;
+  optional AVM2dMessageStatus msg_status = 4;
+  optional apollo.common.Header header = 5;
+}

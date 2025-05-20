@@ -1,0 +1,29 @@
+syntax = "proto2";
+package std_msgs;
+
+
+// 对应std_msgs/Int32
+message Int32 {
+  optional int32 data = 1;
+}
+
+// 对应std_msgs/String
+message String {
+  optional string data = 1;
+}
+
+// 对应std_msgs/Float32
+message Float32 {
+  optional float data = 1;
+}
+
+// 时间消息定义
+message Time {
+  optional uint32 sec = 1;    // 秒
+  optional uint32 nsec = 2;  // 纳秒
+}
+
+// 布尔类型
+message Bool {
+  optional bool data = 1;
+}

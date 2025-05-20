@@ -1,0 +1,103 @@
+syntax = "proto2";
+
+import "header.proto";
+import "geometry.proto";
+import "common.proto";
+import "fusion.proto";
+
+package davinci_adas.apa.pnc;
+
+enum RequestType {
+  STATIC_PLAN = 0;
+  DYNAMIC_PLAN = 1;
+  STATIC_REPLAN = 2;
+}
+
+enum NodeExpandType {
+  NOLIMIT = 0;
+  FORWARD = 1;
+  BACKWARD = 2;
+  LEFT_CIRCLE_FORWARD = 3;
+  STRAIGHT_FORWARD = 4;
+  RIGHT_CIRCLE_FORWARD = 5;
+  LEFT_CIRCLE_BACKWARD = 6;
+  STRAIGHT_BACKWARD = 7;
+  RIGHT_CIRCLE_BACKWARD = 8;
+}
+
+enum NodeExpandedGear {
+  DRIVE = 1;
+  REVERSE = 2;
+  NOTLIMIT = 3;
+}
+
+message PlanNode {
+  optional davinci_adas.apa.geometry.Pose pose = 1;
+  optional NodeExpandType expand_type = 2;
+
+  optional double expand_length = 3;
+  optional NodeExpandedGear expanded_gear = 4;
+
+  repeated NodeExpandType expand_type_list = 5;
+
+  optional davinci_adas.apa.geometry.Pose bias = 6;
+}
+
+enum SystemWorkMode {
+  SYS_WORK_MODE_UNKOWN = 0;
+  SYS_PARK_INTO_SLOT = 1;
+  SYS_PARK_OUTOF_SLOT = 2;
+  SYS_REMOTE_PARK_INTO_SLOT = 3;
+  SYS_REMOTE_PARK_OUTOF_SLOT = 4;
+  SYS_REMOTE_MOVE_VEHICLE = 5;
+  SYS_L0_PARK_INTO_SLOT = 6;
+}
+
+message RequestConf {
+  optional string case_time_string = 1;
+  optional string req_time_string = 2;
+  optional bool onestep_plan_enabled = 3;
+  optional bool hyber_astar_plan_enabled = 4;
+  optional bool image_origin_is_max = 5;
+  optional double plan_radius = 6;
+  optional double cc_line_length = 7;
+  optional bool is_parking_out = 8;
+  optional double dynamic_replan_kappa = 9;
+  optional bool dynamic_replan_gear = 10;
+  optional SystemWorkMode sys_work_mode = 11;
+}
+
+message MapLayer {
+  optional bytes occupancy = 1;
+  optional bytes distance = 2;
+  optional davinci_adas.apa.fusion.FusionLocalObstaclesInfo obstacles = 3;
+}
+
+message PlanMap {
+  optional uint32 img_height = 1;
+  optional uint32 img_width = 2;
+  optional bool image_origin_is_max = 3;
+  optional davinci_adas.apa.common.ImageParam map2slot_param = 4;
+  optional davinci_adas.apa.common.ParkingSlotLocation slot_origin_in_map = 5;
+  optional davinci_adas.apa.pnc.MapLayer body_col_layer = 6;
+  optional davinci_adas.apa.pnc.MapLayer tire_col_layer = 7;
+  optional davinci_adas.apa.common.ParkingSlotLocation loc_slot = 8;
+  optional davinci_adas.apa.pnc.MapLayer path_punish_layer = 9;
+  optional double aisle_width = 10;
+  optional davinci_adas.apa.pnc.MapLayer deceleration_zone_layer = 11;
+}
+
+message PlanningRequest {
+  optional apollo.common.Header header = 1;
+  optional RequestType request_type = 2;
+
+  optional davinci_adas.apa.pnc.PlanNode start_node = 3;
+  optional davinci_adas.apa.pnc.PlanNode end_node = 4;
+  optional davinci_adas.apa.pnc.RequestConf request_conf = 5;
+  optional davinci_adas.apa.fusion.FusionParkingSlotObject target_slot = 6;
+  optional davinci_adas.apa.fusion.FusionLocalSemanticMapInfo map = 7;
+  optional davinci_adas.apa.fusion.FusionLocalObstaclesInfo obstacles = 8;
+  optional davinci_adas.apa.pnc.PlanMap plan_map = 9;
+  optional davinci_adas.apa.fusion.FusionParkingSlotsInfo parking_slots = 10;
+  optional bool escape_obs_mode = 11;
+}

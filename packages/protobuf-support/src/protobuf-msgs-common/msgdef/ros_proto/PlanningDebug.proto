@@ -1,0 +1,62 @@
+syntax = "proto2";
+package apa.planning;
+
+import "header.proto";
+
+
+message PathPoint {
+  optional float x = 1;
+  optional float y = 2;
+  optional float yaw = 3;
+  optional float kappa = 4;
+  optional int32 gear_drive = 5;
+  optional int32 segment_id = 6;
+}
+
+message PlanningDebug {
+  optional apa.common.Header header = 1;
+  
+  // Original: int8 planning_status
+  optional int32 planning_status = 2;  
+  optional string planning_status_str = 3;
+  
+  // Original: int8 replan_reason 
+  optional int32 replan_reason = 4;
+  optional float computation_time = 5;
+  optional string computation_time_str = 6;
+  
+  // PathPoint在geometry.proto中已定义
+  repeated apa.planning.PathPoint path_points = 7; 
+  optional string replan_reason_str_history = 8;
+  
+  // 修正拼写deviation
+  optional float slot_lateral_deviation = 9;
+  optional float slot_heading_deviation = 10;
+  
+  optional string hybrid_astar_status_str = 11;
+  
+  // Original: int8 is_left_parking → bool
+  optional bool is_left_parking = 12;
+
+  enum ParkingSlotType {
+    VERTICAL = 0;
+    PARALLEL = 1;
+    DIAGONAL = 2;  // 修正拼写Diagnal→Diagonal
+  }
+  optional ParkingSlotType parking_slot_type = 13;
+
+  optional float final_pose_lat_err = 14;
+  optional float final_pose_yaw_err = 15;
+  optional float final_pose_front_lat_err = 16;
+  
+  optional float end_point_lat_offset = 17;
+  optional float end_point_lon_offset = 18;
+  
+  optional float planning_inflation_length = 19;
+  optional float planning_inflation_width = 20;
+  
+  repeated apa.planning.PathPoint trajectory_points = 21;
+  repeated apa.planning.PathPoint smoothed_trajectory_points = 22;
+  
+  optional float traj_blocked_distance = 23;
+}

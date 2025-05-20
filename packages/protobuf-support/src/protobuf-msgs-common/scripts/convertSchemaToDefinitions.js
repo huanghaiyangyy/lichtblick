@@ -121,8 +121,6 @@ const protoDefinitions = convertSchemasToDefinitions();
 
 // Create the TS file content
 const outputContent = `// Auto-generated from ProtoJsonSchemas
-import { MessageDefinition } from "@lichtblick/message-definition";
-
 export const ProtoMessages = ${JSON.stringify(protoDefinitions, null, 2)};
 
 export const PublishProtoDataTypes = new Map(

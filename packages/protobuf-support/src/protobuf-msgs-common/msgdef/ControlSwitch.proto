@@ -1,7 +1,0 @@
-syntax = "proto2";
-
-package control_proto;
-
-message ControlSwitch {
-  optional int32 data = 1;
-}

@@ -1,0 +1,29 @@
+syntax = "proto2";
+
+import "header.proto";
+package davinci_adas.apa.odometry;
+
+message Odometry {
+  optional apollo.common.Header header = 1;
+  optional float x = 2;
+  optional float y = 3;
+  optional float z = 4;
+  optional float pitch = 5;
+  optional float roll = 6;
+  optional float yaw = 7;
+  optional float velocity_x = 8;
+  optional float velocity_y = 9;
+  optional float velocity_z = 10;
+  optional float acceleration_x = 11;
+  optional float acceleration_y = 12;
+  optional float acceleration_z = 13;
+  optional float angle_vel_x = 14;
+  optional float angle_vel_y = 15;
+  optional float angle_vel_z = 16;
+  optional uint32 odometry_function = 17;
+  optional uint32 error_code = 18;
+  optional float x_wheel_odom = 19;
+  optional float y_wheel_odom = 20;
+  optional float yaw_wheel_odom = 21;
+}
+

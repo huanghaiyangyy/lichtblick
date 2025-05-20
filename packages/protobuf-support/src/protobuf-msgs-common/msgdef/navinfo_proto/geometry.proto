@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+package davinci_adas.apa.geometry;
+
+message Point2Df {
+  optional float x = 1;
+  optional float y = 2;
+  optional float cov_xx = 3;
+  optional float cov_yy = 4;
+}
+
+message Pose {
+  optional double x = 1;
+  optional double y = 2;
+  optional double yaw = 3;
+}
+
+message Line {
+  optional davinci_adas.apa.geometry.Point2Df start = 1;
+  optional davinci_adas.apa.geometry.Point2Df end = 2;
+}
+message Polygon {
+  optional bool is_open = 1;
+  repeated davinci_adas.apa.geometry.Point2Df points = 2;
+}

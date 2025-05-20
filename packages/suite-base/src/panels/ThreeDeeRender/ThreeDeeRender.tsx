@@ -64,6 +64,7 @@ import { PublishClickEventMap } from "./renderables/PublishClickTool";
 import { DEFAULT_PUBLISH_SETTINGS } from "./renderables/PublishSettings";
 import { InterfaceMode } from "./types";
 import { TopicAdvertisementManager } from "@lichtblick/suite-base/panels/ThreeDeeRender/TopicAdvertisementManager";
+import { Pose } from "@foxglove/schemas/jsonschema";
 
 const log = Logger.getLogger(__filename);
 
@@ -88,9 +89,9 @@ const SCHEMA_MAP = {
     "/record_trace": "std_msgs/msg/Int32",
   },
   protobuf:{
-    "clicked_point": "apa.geometry.PointStamped",
-    "clicked_pose": "apa.geometry.PoseStamped",
-    "clicked_pose_estimate": "apa.geometry.PoseWithCovarianceStamped",
+    "clicked_point": "foxglove.PoseInFrame",
+    "clicked_pose": "foxglove.PoseInFrame",
+    "clicked_pose_estimate": "foxglove.PoseInFrame",
     "/control_switch": "std_msgs.Int32",
     "/park_out_type": "std_msgs.String",
     "/parking_head_in": "std_msgs.Int32",
@@ -819,10 +820,29 @@ export function ThreeDeeRender(props: {
       try {
         switch (event.publishClickType) {
           case "point": {
-            console.debug("[Publish] trying to publish clicking point.");
-            let point = pointTransform(event.point, renderFrameId, publishFrameId, renderer);
-            const message = makePointMessage(point, publishFrameId);
-            context.publish(publishTopics.point, message);
+            if (context.dataSourceProfile === "protobuf"){
+              let point = pointTransform(event.point, renderFrameId, publishFrameId, renderer);
+              // convert point to pose
+              const pose = {
+                position: {
+                  x: point.x,
+                  y: point.y,
+                  z: point.z,
+                },
+                orientation: {
+                  x: 0,
+                  y: 0,
+                  z: 0,
+                  w: 1,
+                },
+              };
+              const message = makePoseMessage(pose, publishFrameId);
+              context.publish(publishTopics.point, message);
+            } else {
+              let point = pointTransform(event.point, renderFrameId, publishFrameId, renderer);
+              const message = makePointMessage(point, publishFrameId);
+              context.publish(publishTopics.point, message);
+            }
             break;
           }
           case "pose": {
@@ -832,15 +852,21 @@ export function ThreeDeeRender(props: {
             break;
           }
           case "pose_estimate": {
-            let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
-            const message = makePoseEstimateMessage(
-              pose,
-              publishFrameId,
-              latestPublishConfig.current.poseEstimateXDeviation,
-              latestPublishConfig.current.poseEstimateYDeviation,
-              latestPublishConfig.current.poseEstimateThetaDeviation,
-            );
-            context.publish(publishTopics.pose, message);
+            if (context.dataSourceProfile === "protobuf"){
+              let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
+              const message = makePoseMessage(pose, publishFrameId);
+              context.publish(publishTopics.pose, message);
+            } else {
+              let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
+              const message = makePoseEstimateMessage(
+                pose,
+                publishFrameId,
+                latestPublishConfig.current.poseEstimateXDeviation,
+                latestPublishConfig.current.poseEstimateYDeviation,
+                latestPublishConfig.current.poseEstimateThetaDeviation,
+              );
+              context.publish(publishTopics.pose, message);
+            }
             break;
           }
         }

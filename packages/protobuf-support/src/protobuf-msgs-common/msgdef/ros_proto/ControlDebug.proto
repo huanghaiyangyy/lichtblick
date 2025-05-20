@@ -1,0 +1,50 @@
+syntax = "proto2";
+import "header.proto";
+package apa.control;
+
+message ControlDebug {
+  optional apa.common.Header header = 1;
+
+  // 添加分号以符合 proto2 语法规范
+  optional float lat_err = 2;
+  optional float yaw_err = 3;
+  optional float ref_kappa = 4;
+  optional float ref_x = 5;
+  optional float ref_y = 6;
+  optional float ref_yaw = 7;
+  optional float current_x = 8;
+  optional float current_y = 9;
+  optional float current_yaw = 10;
+  optional float target_kappa = 11;
+  optional float lat_err_target_kappa = 12; 
+  optional float yaw_err_target_kappa = 13; 
+  optional float feedforward_target_kappa = 14;
+  optional float target_omega = 15;
+  optional float target_steer = 16;
+  optional float current_v = 17;
+  optional float ref_v = 18;
+  optional float lon_err = 19;
+  optional float ref_distance = 20;
+  optional float k_e = 21;
+  optional float k_theta = 22;
+  optional int32 ref_gear = 23;
+  optional int32 xbw_lat_status = 24;
+  optional int32 xbw_lon_status = 25;
+  optional string control_status = 26;
+  optional float current_speed_kph = 27;
+  optional int32 current_gear = 28;
+  optional string lat_err_str = 29;
+  optional string yaw_err_str = 30;
+  optional int32 control_active = 31;
+  optional float current_steer_kappa = 32;
+  optional float current_dkappa = 33;
+  optional float preview_dkappa = 34;
+  optional float current_s = 35;
+  optional int32 smooth = 36;
+  optional int32 adas_lat_error_status = 37;
+  optional int32 apa_lat_error_status = 38;
+  optional int32 lon_error_status = 39;
+  optional float current_steer_angle = 40;
+  optional float control_steer_angle = 41;
+  optional int32 j01_estop_counter_ = 42;
+}
