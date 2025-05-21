@@ -13,6 +13,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { ChevronUp24Regular } from "@fluentui/react-icons";
 import { Link, Typography } from "@mui/material";
 import { t } from "i18next";
 import { useSnackbar } from "notistack";
@@ -25,6 +26,7 @@ import Logger from "@lichtblick/log";
 import { AppSetting } from "@lichtblick/suite-base/AppSetting";
 import AccountSettings from "@lichtblick/suite-base/components/AccountSettingsSidebar/AccountSettings";
 import { AppBar, AppBarProps } from "@lichtblick/suite-base/components/AppBar";
+import { AppBarIconButton } from "@lichtblick/suite-base/components/AppBar/AppBarIconButton";
 import { CustomWindowControlsProps } from "@lichtblick/suite-base/components/AppBar/CustomWindowControls";
 import {
   DataSourceDialog,
@@ -92,6 +94,7 @@ import { parseAppURLState } from "@lichtblick/suite-base/util/appURLState";
 import isDesktopApp from "@lichtblick/suite-base/util/isDesktopApp";
 
 import { useWorkspaceActions } from "./context/Workspace/useWorkspaceActions";
+import { useMousePosition } from "./hooks/useMousePosition";
 
 const log = Logger.getLogger(__filename);
 
@@ -105,6 +108,30 @@ const useStyles = makeStyles()({
     flex: "1 1 100%",
     outline: "none",
     overflow: "hidden",
+  },
+  hoverExpandButton: {
+    position: "absolute",
+    top: "5px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 1000,
+    opacity: 0,
+    transition: "opacity 0.2s ease-in-out",
+    "&:hover": {
+      opacity: "1 !important",
+    },
+  },
+  expandButtonInner: {
+    width: "36px",
+    height: "18px",
+    backgroundColor: "var(--app-background)",
+    border: "1px solid var(--divider)",
+    borderRadius: "0 0 18px 18px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    cursor: "pointer",
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
   },
 });
 
@@ -181,6 +208,15 @@ function WorkspaceContent(props: WorkspaceProps): React.JSX.Element {
     }
     return extensions;
   }, [availableSources]);
+
+  const [isAppBarCollapsed, setIsAppBarCollapsed] = useState(false);
+
+  const mouseY = useMousePosition();
+  const showExpandButton = isAppBarCollapsed && mouseY < 30;
+
+  const toggleAppBarCollapse = useCallback(() => {
+    setIsAppBarCollapsed((prev) => !prev);
+  }, []);
 
   // We use playerId to detect when a player changes for RemountOnValueChange below
   // see comment below above the RemountOnValueChange component
@@ -619,20 +655,46 @@ function WorkspaceContent(props: WorkspaceProps): React.JSX.Element {
 
   const appBar = useMemo(
     () => (
-      <AppBarComponent
-        leftInset={props.appBarLeftInset}
-        onDoubleClick={props.onAppBarDoubleClick}
-        showCustomWindowControls={props.showCustomWindowControls}
-        isMaximized={props.isMaximized}
-        initialZoomFactor={props.initialZoomFactor}
-        onMinimizeWindow={props.onMinimizeWindow}
-        onMaximizeWindow={props.onMaximizeWindow}
-        onUnmaximizeWindow={props.onUnmaximizeWindow}
-        onCloseWindow={props.onCloseWindow}
-      />
+      <div style={{ position: "relative" }}>
+        {!isAppBarCollapsed ? (
+          <AppBarComponent
+            leftInset={props.appBarLeftInset}
+            onDoubleClick={props.onAppBarDoubleClick}
+            showCustomWindowControls={props.showCustomWindowControls}
+            isMaximized={props.isMaximized}
+            initialZoomFactor={props.initialZoomFactor}
+            onMinimizeWindow={props.onMinimizeWindow}
+            onMaximizeWindow={props.onMaximizeWindow}
+            onUnmaximizeWindow={props.onUnmaximizeWindow}
+            onCloseWindow={props.onCloseWindow}
+            rightContent={
+              <AppBarIconButton
+                title="Collapse app bar"
+                onClick={toggleAppBarCollapse}
+              >
+                <ChevronUp24Regular />
+              </AppBarIconButton>
+            }
+          />
+        ) : (
+          <div
+            className={classes.hoverExpandButton}
+            style={{
+              opacity: showExpandButton ? 0.7 : 0.4,
+            }}
+            onClick={toggleAppBarCollapse}
+          >
+            <div className={classes.expandButtonInner}>
+              <ChevronUp24Regular style={{ transform: "rotate(180deg)", fontSize: "14px" }} />
+            </div>
+          </div>
+        )}
+      </div>
     ),
     [
       AppBarComponent,
+      isAppBarCollapsed,
+      toggleAppBarCollapse,
       props.appBarLeftInset,
       props.isMaximized,
       props.initialZoomFactor,

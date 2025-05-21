@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import {
-  ChevronDown12Regular,
+  ChevronDown12Regular,  ChevronUp24Regular,
   PanelLeft24Filled,
   PanelLeft24Regular,
   PanelRight24Filled,
@@ -20,7 +20,7 @@ import tc from "tinycolor2";
 import { makeStyles } from "tss-react/mui";
 
 import { AppSetting } from "@lichtblick/suite-base/AppSetting";
-import { LichtblickLogo } from "@lichtblick/suite-base/components/LichtblickLogo";
+import { AppLogo } from "@lichtblick/suite-base/components/LichtblickLogo";
 import { MemoryUseIndicator } from "@lichtblick/suite-base/components/MemoryUseIndicator";
 import Stack from "@lichtblick/suite-base/components/Stack";
 import { useAppContext } from "@lichtblick/suite-base/context/AppContext";
@@ -43,9 +43,9 @@ import { CustomWindowControls, CustomWindowControlsProps } from "./CustomWindowC
 import { DataSource } from "./DataSource";
 import { SettingsMenu } from "./SettingsMenu";
 
-const useStyles = makeStyles<{ debugDragRegion?: boolean }, "avatar">()((
+const useStyles = makeStyles<{ debugDragRegion?: boolean; collapsed?: boolean }, "avatar">()((
   theme,
-  { debugDragRegion = false },
+  { debugDragRegion = false , collapsed = false },
   classes,
 ) => {
   const NOT_DRAGGABLE_STYLE: Record<string, string> = { WebkitAppRegion: "no-drag" };
@@ -59,6 +59,8 @@ const useStyles = makeStyles<{ debugDragRegion?: boolean }, "avatar">()((
       gridTemplateAreas: `"start middle end"`,
       gridTemplateColumns: "1fr auto 1fr",
       alignItems: "center",
+      height: collapsed ? theme.spacing(4) : "auto", // Reduced height when collapsed
+      transition: "height 0.2s ease-in-out",
     },
     logo: {
       padding: theme.spacing(0.75, 0.5),
@@ -156,6 +158,7 @@ export type AppBarProps = CustomWindowControlsProps & {
   leftInset?: number;
   onDoubleClick?: () => void;
   debugDragRegion?: boolean;
+  rightContent?: React.ReactNode;
 };
 
 const selectHasCurrentLayout = (state: LayoutState) => state.selectedLayout != undefined;
@@ -174,6 +177,7 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
     onUnmaximizeWindow,
     showCustomWindowControls = false,
   } = props;
+
   const { classes, cx, theme } = useStyles({ debugDragRegion });
   const { t } = useTranslation("appBar");
 
@@ -217,7 +221,7 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
                   setAppMenuEl(event.currentTarget);
                 }}
               >
-                <LichtblickLogo fontSize="inherit" color="inherit" />
+                <AppLogo fontSize="inherit" color="inherit" />
                 <ChevronDown12Regular
                   className={classes.dropDownIcon}
                   primaryFill={theme.palette.common.white}
@@ -251,7 +255,7 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
             </div>
           </div>
 
-          <div className={classes.middle}>
+          <div className={cx(classes.middle)}>
             <DataSource />
           </div>
 
@@ -291,6 +295,7 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
                   {rightSidebarOpen ? <PanelRight24Filled /> : <PanelRight24Regular />}
                 </AppBarIconButton>
               </Stack>
+
               <Tooltip classes={{ tooltip: classes.tooltip }} title="Profile" arrow={false}>
                 <IconButton
                   className={cx(classes.iconButton, { "Mui-selected": userMenuOpen })}
@@ -309,6 +314,9 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
                   <Avatar className={classes.avatar} variant="rounded" />
                 </IconButton>
               </Tooltip>
+
+              {props.rightContent}
+
               {showCustomWindowControls && (
                 <CustomWindowControls
                   onMinimizeWindow={onMinimizeWindow}

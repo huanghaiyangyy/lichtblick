@@ -6,6 +6,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { SvgIcon, SvgIconProps } from "@mui/material";
+import carSvg from "../assets/car-lot-park-svgrepo-com.svg";
+import carSvg2 from "../assets/car-garage-svgrepo-com.svg";
+
+const logos = {
+  car1: carSvg,
+  car2: carSvg2,
+}
+
 
 export function LichtblickLogo(props: SvgIconProps): React.JSX.Element {
   return (
@@ -52,6 +60,19 @@ export function LichtblickLogo(props: SvgIconProps): React.JSX.Element {
           </g>
         </g>
       </svg>
+    </SvgIcon>
+  );
+}
+
+interface AppLogoProps extends SvgIconProps {
+  variant?: keyof typeof logos;
+}
+
+export function AppLogo({ variant = "car1", ...props }: AppLogoProps): React.JSX.Element {
+  const LogoComponent = logos[variant];
+  return (
+    <SvgIcon viewBox="0 0 512 512" sx={{color: 'white'}} {...props}>
+      <LogoComponent width="100%" height="100%" />
     </SvgIcon>
   );
 }

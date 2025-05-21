@@ -13,6 +13,8 @@ export const appBar = {
   extensions: "Extensions",
   file: "File",
   help: "Help",
+  expandAppBar: "Expand app bar",
+  collapseAppBar: "Hide app bar",
   hideLeftSidebar: "Hide left sidebar",
   hideRightSidebar: "Hide right sidebar",
   importLayoutFromFile: "Import layout from file…",
