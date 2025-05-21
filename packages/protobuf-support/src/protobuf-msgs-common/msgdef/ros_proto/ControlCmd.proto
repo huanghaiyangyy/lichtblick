@@ -1,9 +1,9 @@
 syntax = "proto2";
-import "header.proto";
+import "apa_header.proto";
 package apa.control;
 
 message ControlCmd {
-  optional apa.common.Header header = 1;
+  optional apa.common.ApaHeader header = 1;
 
   // 0. <= throttle <= 1.
   optional float throttle = 2;

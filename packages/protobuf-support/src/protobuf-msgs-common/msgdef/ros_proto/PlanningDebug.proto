@@ -1,7 +1,7 @@
 syntax = "proto2";
 package apa.planning;
 
-import "header.proto";
+import "apa_header.proto";
 
 
 message PathPoint {
@@ -14,7 +14,7 @@ message PathPoint {
 }
 
 message PlanningDebug {
-  optional apa.common.Header header = 1;
+  optional apa.common.ApaHeader header = 1;
   
   // Original: int8 planning_status
   optional int32 planning_status = 2;  

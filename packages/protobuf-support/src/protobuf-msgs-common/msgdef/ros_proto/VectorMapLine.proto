@@ -1,5 +1,5 @@
 syntax = "proto2";
-import "header.proto";
+import "apa_header.proto";
 
 package apa.vector_map;
 
@@ -18,6 +18,6 @@ message VectorMapLine {
 }
 
 message VectorMapLineArray {
-  optional apa.common.Header header = 1;
+  optional apa.common.ApaHeader header = 1;
   repeated VectorMapLine vector_map_lines = 2; 
 }

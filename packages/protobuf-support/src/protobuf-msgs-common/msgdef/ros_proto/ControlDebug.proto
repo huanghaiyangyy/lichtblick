@@ -1,9 +1,9 @@
 syntax = "proto2";
-import "header.proto";
+import "apa_header.proto";
 package apa.control;
 
 message ControlDebug {
-  optional apa.common.Header header = 1;
+  optional apa.common.ApaHeader header = 1;
 
   // 添加分号以符合 proto2 语法规范
   optional float lat_err = 2;

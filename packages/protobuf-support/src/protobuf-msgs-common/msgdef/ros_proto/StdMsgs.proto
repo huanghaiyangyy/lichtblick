@@ -1,5 +1,5 @@
 syntax = "proto2";
-package std_msgs;
+package apa.std_msgs;
 
 
 // 对应std_msgs/Int32

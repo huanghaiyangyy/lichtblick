@@ -3,7 +3,7 @@ syntax = "proto2";
 package apa.common;
 
 // Error codes enum for API's categorized by modules.
-enum ErrorCode {
+enum ApaErrorCode {
   // No error, returns on success.
   OK = 0;
 
@@ -72,7 +72,7 @@ enum ErrorCode {
   STORYTELLING_ERROR = 14000;
 }
 
-message StatusPb {
-  optional ErrorCode error_code = 1 [default = OK];
+message ApaStatusPb {
+  optional ApaErrorCode error_code = 1 [default = OK];
   optional string msg = 2;
 }

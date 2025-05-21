@@ -2,9 +2,9 @@ syntax = "proto2";
 
 package apa.common;
 
-import "error_code.proto";
+import "apa_error_code.proto";
 
-message Header {
+message ApaHeader {
   // Message publishing time in seconds.
   optional double timestamp_sec = 1;
 
@@ -27,7 +27,7 @@ message Header {
   // data version
   optional uint32 version = 7 [default = 1];
 
-  optional StatusPb status = 8;
+  optional ApaStatusPb status = 8;
 
   optional string frame_id = 9;
 }

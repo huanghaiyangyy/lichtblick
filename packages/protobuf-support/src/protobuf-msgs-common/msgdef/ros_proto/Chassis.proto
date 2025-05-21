@@ -1,9 +1,9 @@
 syntax = "proto2";
-import "header.proto";
+import "apa_header.proto";
 package apa.control;
 
 message Chassis {
-  optional apa.common.Header header = 1;
+  optional apa.common.ApaHeader header = 1;
   optional int32 xbw_lat_status = 2; 
   optional int32 xbw_lon_status = 3;
   optional string control_status = 4; 

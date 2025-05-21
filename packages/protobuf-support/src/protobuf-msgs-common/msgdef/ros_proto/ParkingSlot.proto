@@ -1,5 +1,5 @@
 syntax = "proto2";
-import "header.proto";
+import "apa_header.proto";
 
 package apa.parking;
 
@@ -22,7 +22,7 @@ message ParkingSlot {
 }
 
 message ParkingSlotList {
-  optional apa.common.Header header = 1;
+  optional apa.common.ApaHeader header = 1;
   repeated ParkingSlot parking_slots = 2;
   optional int32 selected_slot_id = 3;  // int8升级为int32
   optional int32 is_leftside_parking = 4;
