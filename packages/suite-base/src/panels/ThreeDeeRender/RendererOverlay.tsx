@@ -384,7 +384,6 @@ export function RendererOverlay(props: Props): React.JSX.Element {
   const open1 = Boolean(anchorEl1);
   const open2 = Boolean(anchorEl2);
 
-  const [displayText1, setDisplayText1] = useState(true);
   const [displayText2, setDisplayText2] = useState(true);
 
   //消息解析
@@ -480,6 +479,19 @@ export function RendererOverlay(props: Props): React.JSX.Element {
       return "等待控制指令...";
     }
   }, [props.receivedControlCmdMessage]);
+
+  const controlActivated = useMemo(() => {
+    if (!props.receivedControlMessage) {
+      return false;
+    }
+    try {
+      const msg = (props.receivedControlMessage as any)?.message ?? props.receivedControlMessage;
+      return Number(msg.control_active) === 1;
+    } catch (error) {
+      console.error("消息解析错误:", error);
+      return false;
+    }
+  }, [props.receivedControlMessage]);
 
   function safeNumberFormat(value: unknown, decimals: number): string {
     // console.log('[格式化] 原始值:', value, '类型:', typeof value);
@@ -834,8 +846,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
           <Button
             variant="outlined"
             onClick={() => {
-              setDisplayText1(!displayText1);
-              displayText1 ? props.onClickStartButton() : props.onClickStopButton();
+              !controlActivated ? props.onClickStartButton() : props.onClickStopButton();
             }}
             sx={{
               minWidth: 72,
@@ -844,18 +855,18 @@ export function RendererOverlay(props: Props): React.JSX.Element {
               // 动态颜色设置
               color: "inherit",
               backgroundColor: (theme) =>
-                displayText1
+                !controlActivated
                   ? tc(theme.palette.success.main).setAlpha(0.2).toString() // 绿色背景
                   : tc(theme.palette.error.main).setAlpha(0.2).toString(), // 红色背景
               border: "1px solid",
               borderColor: (theme) =>
-                displayText1
+                !controlActivated
                   ? theme.palette.success.main // 绿色边框
                   : theme.palette.error.main, // 红色边框
               boxShadow: (theme) => theme.shadows[1],
               "&:hover": {
                 backgroundColor: (theme) =>
-                  displayText1
+                  !controlActivated
                     ? tc(theme.palette.success.main).setAlpha(0.3).toString() // 悬停加深绿色
                     : tc(theme.palette.error.main).setAlpha(0.3).toString(), // 悬停加深红色
                 boxShadow: (theme) => theme.shadows[4],
@@ -864,7 +875,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
               // 新增点击状态样式
               "&:active": {
                 backgroundColor: (theme) =>
-                  displayText1
+                  !controlActivated
                     ? tc(theme.palette.success.dark).setAlpha(0.5).toString()
                     : tc(theme.palette.error.dark).setAlpha(0.5).toString(),
                 transform: "scale(0.98)",
@@ -872,7 +883,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
               transition: "all 0.2s ease",
             }}
           >
-            {t(displayText1 ? "开始泊车" : ("终止泊车" as any))}
+            {t(!controlActivated ? "开始泊车" : ("终止泊车" as any))}
           </Button>
           <Button
             variant="outlined"
@@ -909,7 +920,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
               // 新增点击状态样式
               "&:active": {
                 backgroundColor: (theme) =>
-                  displayText1
+                  !controlActivated
                     ? tc(theme.palette.success.dark).setAlpha(0.5).toString()
                     : tc(theme.palette.error.dark).setAlpha(0.5).toString(),
                 transform: "scale(0.98)",

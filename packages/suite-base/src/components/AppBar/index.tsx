@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import {
-  ChevronDown12Regular,  ChevronUp24Regular,
+  ChevronDown12Regular,
   PanelLeft24Filled,
   PanelLeft24Regular,
   PanelRight24Filled,
