@@ -973,7 +973,7 @@ export function ThreeDeeRender(props: {
     context.publish("/parking_head_in", message);
   }, [context]);
 
-  const onClickLeftParkingOutButton = useCallback(() => {
+  const onClickVerticalLeftParkingOutButton = useCallback(() => {
     if (!context.publish) {
       log.error("Data source does not support publishing");
       return;
@@ -990,7 +990,7 @@ export function ThreeDeeRender(props: {
     context.publish("/park_out_type", message);
   }, [context]);
 
-  const onClickRightParkingOutButton = useCallback(() => {
+  const onClickVerticalRightParkingOutButton = useCallback(() => {
     if (!context.publish) {
       log.error("Data source does not support publishing");
       return;
@@ -1003,6 +1003,40 @@ export function ThreeDeeRender(props: {
     }
     const message = {
       data: "VerticalRight",
+    };
+    context.publish("/park_out_type", message);
+  }, [context]);
+
+  const onClickParallelLeftParkingOutButton = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+      return;
+    }
+    const message = {
+      data: "ParallelLeft",
+    };
+    context.publish("/park_out_type", message);
+  }, [context]);
+
+  const onClickParallelRightParkingOutButton = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+      return;
+    }
+    const message = {
+      data: "ParallelRight",
     };
     context.publish("/park_out_type", message);
   }, [context]);
@@ -1169,8 +1203,10 @@ export function ThreeDeeRender(props: {
             onClickStopButton={onClickStopButton}
             onClickFrontParkingButton={onClickFrontParkingButton}
             onClickRearParkingButton={onClickRearParkingButton}
-            onClickLeftParkingOutButton={onClickLeftParkingOutButton}
-            onClickRightParkingOutButton={onClickRightParkingOutButton}
+            onClickVerticalLeftParkingOutButton={onClickVerticalLeftParkingOutButton}
+            onClickVerticalRightParkingOutButton={onClickVerticalRightParkingOutButton}
+            onClickParallelLeftParkingOutButton={onClickParallelLeftParkingOutButton}
+            onClickParallelRightParkingOutButton={onClickParallelRightParkingOutButton}
             onClickRecordTraceStartButton={onClickRecordTraceStartButton}
             onClickRecordTraceStopButton={onClickRecordTraceStopButton}
             onClickParkingModeView={onClickParkingModeView}

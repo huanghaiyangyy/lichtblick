@@ -208,8 +208,10 @@ type Props = {
   onClickStopButton: () => void;
   onClickFrontParkingButton: () => void;
   onClickRearParkingButton: () => void;
-  onClickLeftParkingOutButton: () => void;
-  onClickRightParkingOutButton: () => void;
+  onClickVerticalLeftParkingOutButton: () => void;
+  onClickVerticalRightParkingOutButton: () => void;
+  onClickParallelLeftParkingOutButton: () => void;
+  onClickParallelRightParkingOutButton: () => void;
   onClickRecordTraceStartButton: () => void;
   onClickRecordTraceStopButton: () => void;
   onClickParkingModeView: () => void;
@@ -768,7 +770,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
             >
               <MenuItem
                 onClick={() => {
-                  props.onClickLeftParkingOutButton();
+                  props.onClickVerticalLeftParkingOutButton();
                   setAnchorEl2(null); // 添加关闭菜单
                 }}
                 sx={{
@@ -786,11 +788,11 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                   transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
               >
-                {t("左侧泊出" as any)}
+                {t("垂直左侧泊出" as any)}
               </MenuItem>
               <MenuItem
                 onClick={() => {
-                  props.onClickRightParkingOutButton();
+                  props.onClickVerticalRightParkingOutButton();
                   setAnchorEl2(null); // 添加关闭菜单
                 }}
                 sx={{
@@ -808,7 +810,51 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                   transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
               >
-                {t("右侧泊出" as any)}
+                {t("垂直右侧泊出" as any)}
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  props.onClickParallelLeftParkingOutButton();
+                  setAnchorEl2(null); // 添加关闭菜单
+                }}
+                sx={{
+                  fontSize: "0.75rem",
+                  padding: "6px 16px",
+                  justifyContent: "center",
+                  textAlign: "center", // 确保文字居中
+                  // 新增点击反馈样式
+                  "&:active": {
+                    backgroundColor: (theme) =>
+                      tc(theme.palette.secondary.dark).setAlpha(0.9).toString(),
+                    transform: "scale(0.98)",
+                    boxShadow: theme.shadows[2],
+                  },
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                {t("水平左侧泊出" as any)}
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  props.onClickParallelRightParkingOutButton();
+                  setAnchorEl2(null); // 添加关闭菜单
+                }}
+                sx={{
+                  fontSize: "0.75rem",
+                  padding: "6px 16px",
+                  justifyContent: "center",
+                  textAlign: "center", // 确保文字居中
+                  // 新增点击反馈样式
+                  "&:active": {
+                    backgroundColor: (theme) =>
+                      tc(theme.palette.secondary.dark).setAlpha(0.9).toString(),
+                    transform: "scale(0.98)",
+                    boxShadow: theme.shadows[2],
+                  },
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                {t("水平右侧泊出" as any)}
               </MenuItem>
             </Menu>
           </div>
