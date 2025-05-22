@@ -90,6 +90,7 @@ export const threeDee = {
   addGrid: "Add Grid",
   addURDF: "Add URDF",
   addGLTF: "Add GLTF",
+  addParkingSlot: "Add Parking Slot",
   customLayers: "Custom layers",
   delete: "Delete",
   divisions: "Divisions",

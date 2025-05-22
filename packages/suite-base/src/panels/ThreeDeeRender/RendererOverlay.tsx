@@ -215,6 +215,7 @@ type Props = {
   onClickRecordTraceStartButton: () => void;
   onClickRecordTraceStopButton: () => void;
   onClickParkingModeView: () => void;
+  onClickSelectParkingSlot: () => void;
   cameraLocked?: boolean;
   perspective: boolean;
   publishActive: boolean;
@@ -223,6 +224,7 @@ type Props = {
   receivedControlMessage?: unknown; // 新增接收消息属性
   receivedPlanMessage?: unknown; // 新增接收消息属性
   receivedControlCmdMessage?: unknown; // 收到 /control_cmd channel 下的消息
+  parkingSlotSelectionActive?: boolean;
 };
 
 /**
@@ -862,19 +864,28 @@ export function RendererOverlay(props: Props): React.JSX.Element {
             <div>
               <Button
                 variant="outlined"
-                onClick={props.onClickPublish}
+                onClick={props.onClickSelectParkingSlot}
                 sx={{
                   minWidth: 72,
                   width: "100%",
                   height: 32,
-                  color: "inherit",
+                  color: props.parkingSlotSelectionActive ? "success.main" : "inherit", // Change color when active
                   border: "1px solid",
                   borderColor: (theme) =>
-                    theme.palette.mode === "dark" ? "rgba(255,255,255,0.23)" : "rgba(0,0,0,0.23)",
-                  boxShadow: (theme) => theme.shadows[1], // 添加与3D按钮相同的阴影
+                    props.parkingSlotSelectionActive
+                      ? theme.palette.success.main
+                      : theme.palette.mode === "dark" ? "rgba(255,255,255,0.23)" : "rgba(0,0,0,0.23)",
+                  boxShadow: (theme) => theme.shadows[1],
+                  backgroundColor: (theme) =>
+                    props.parkingSlotSelectionActive
+                      ? tc(theme.palette.success.main).setAlpha(0.1).toString()
+                      : "transparent",
                   "&:hover": {
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    boxShadow: (theme) => theme.shadows[4], // 悬停时增强阴影
+                    backgroundColor: (theme) =>
+                      props.parkingSlotSelectionActive
+                        ? tc(theme.palette.success.main).setAlpha(0.2).toString()
+                        : "rgba(255,255,255,0.08)",
+                    boxShadow: (theme) => theme.shadows[4],
                     borderColor: "currentColor",
                   },
                   "&:active": {
@@ -885,7 +896,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                   },
                 }}
               >
-                {t("选车位" as any)}
+                {t(props.parkingSlotSelectionActive ? "定位中" as any : "选车位" as any)}
               </Button>
             </div>
           )}
