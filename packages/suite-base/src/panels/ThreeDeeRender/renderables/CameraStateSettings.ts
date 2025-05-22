@@ -538,9 +538,14 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
     const { publish } = this.renderer.config;
     const { transformTree } = this.renderer;
 
+    const oldPublishFrameId = this.renderer.publishFrameId;
+
     const publishFrameExists = publish.publishFrame != undefined && transformTree.hasFrame(publish.publishFrame);
     if (publishFrameExists) {
       this.renderer.setPublishFrameId(publish.publishFrame);
+      if (oldPublishFrameId !== publish.publishFrame) {
+        this.renderer.emit("publishFrameChanged", publish.publishFrame, this.renderer);
+      }
       return;
     }
 
@@ -548,6 +553,9 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
     // heuristically most valid frame (if any frames are present)
     const publishFrameId = transformTree.getDefaultFollowFrameId();
     this.renderer.setPublishFrameId(publishFrameId);
+    if (oldPublishFrameId !== publishFrameId) {
+      this.renderer.emit("publishFrameChanged", publishFrameId, this.renderer);
+    }
   }
 
   #handleErrorChange = (): void => {
@@ -665,5 +673,9 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
       this.#orthographicCamera.far = cameraState.far;
       this.#orthographicCamera.updateProjectionMatrix();
     }
+  }
+
+  public setOrbitControlsEnabled(enabled: boolean): void {
+    this.#controls.enabled = enabled;
   }
 }

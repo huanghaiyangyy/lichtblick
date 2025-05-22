@@ -24,6 +24,7 @@ import { SceneSettings } from "@lichtblick/suite-base/panels/ThreeDeeRender/rend
 import { Urdfs } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/Urdfs";
 import { Gltfs } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/Gltfs";
 import { VelodyneScans } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/VelodyneScans";
+import { ParkingSlots } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/ParkingSlots";
 
 import { IRenderer } from "./IRenderer";
 import { SceneExtension } from "./SceneExtension";
@@ -120,6 +121,9 @@ export const DEFAULT_SCENE_EXTENSION_CONFIG: SceneExtensionConfig = {
     },
     [VelodyneScans.extensionId]: {
       init: (renderer: IRenderer) => new VelodyneScans(renderer),
+    },
+    [ParkingSlots.extensionId]: {
+      init: (renderer: IRenderer) => new ParkingSlots(renderer),
     },
   },
 };

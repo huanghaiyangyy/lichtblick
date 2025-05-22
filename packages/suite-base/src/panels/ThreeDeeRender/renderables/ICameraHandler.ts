@@ -31,4 +31,6 @@ export interface ICameraHandler extends SceneExtension {
    * @param pixelRatio - The device pixel ratio (device pixels per CSS pixel)
    */
   handleResize(width: number, height: number, pixelRatio: number): void;
+
+  setOrbitControlsEnabled?(enabled: boolean): void;
 }

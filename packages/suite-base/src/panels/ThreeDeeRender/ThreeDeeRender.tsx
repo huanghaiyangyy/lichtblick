@@ -65,6 +65,8 @@ import { PublishClickEventMap } from "./renderables/PublishClickTool";
 import { DEFAULT_PUBLISH_SETTINGS } from "./renderables/PublishSettings";
 import { InterfaceMode } from "./types";
 import { TopicAdvertisementManager } from "@lichtblick/suite-base/panels/ThreeDeeRender/TopicAdvertisementManager";
+import { ParkingSlots } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/ParkingSlots";
+import { makePose } from "@lichtblick/suite-base/panels/ThreeDeeRender/transforms";
 
 const log = Logger.getLogger(__filename);
 
@@ -77,7 +79,7 @@ const SCHEMA_MAP = {
     "/park_out_type": "std_msgs/String",
     "/parking_head_in": "std_msgs/Int32",
     "/record_trace": "std_msgs/Int32",
-
+    "/selected_parking_slot": "geometry_msgs/PoseStamped",
   },
   ros2:{
     "clicked_point": "geometry_msgs/msg/PointStamped",
@@ -87,6 +89,7 @@ const SCHEMA_MAP = {
     "/park_out_type": "std_msgs/msg/String",
     "/parking_head_in": "std_msgs/msg/Int32",
     "/record_trace": "std_msgs/msg/Int32",
+    "/selected_parking_slot": "geometry_msgs/msg/PoseStamped",
   },
   protobuf:{
     "clicked_point": "foxglove.PoseInFrame",
@@ -96,6 +99,7 @@ const SCHEMA_MAP = {
     "/park_out_type": "apa.std_msgs.String",
     "/parking_head_in": "apa.std_msgs.Int32",
     "/record_trace": "apa.std_msgs.Int32",
+    "/selected_parking_slot": "foxglove.PoseInFrame",
   },
   default: {
     "clicked_point": "geometry_msgs/PointStamped",
@@ -105,6 +109,7 @@ const SCHEMA_MAP = {
     "/park_out_type": "std_msgs/String",
     "/parking_head_in": "std_msgs/Int32",
     "/record_trace": "std_msgs/Int32",
+    "/selected_parking_slot": "geometry_msgs/PoseStamped",
   },
 };
 
@@ -770,14 +775,13 @@ export function ThreeDeeRender(props: {
       ? context.dataSourceProfile
       : "default";
 
-    topicManager.advertise(context, publishTopics.goal, SCHEMA_MAP[schemaKey]["clicked_pose"], { datatypes });
+    topicManager.advertise(context, publishTopics.goal, SCHEMA_MAP[schemaKey]["/selected_parking_slot"], { datatypes });
     topicManager.advertise(context, publishTopics.point, SCHEMA_MAP[schemaKey]["clicked_point"], { datatypes });
     topicManager.advertise(context, publishTopics.pose, SCHEMA_MAP[schemaKey]["clicked_pose_estimate"], { datatypes });
     topicManager.advertise(context, "/control_switch", SCHEMA_MAP[schemaKey]["/control_switch"], { datatypes });
     topicManager.advertise(context, "/park_out_type", SCHEMA_MAP[schemaKey]["/park_out_type"], { datatypes });
     topicManager.advertise(context, "/parking_head_in", SCHEMA_MAP[schemaKey]["/parking_head_in"], { datatypes });
     topicManager.advertise(context, "/record_trace", SCHEMA_MAP[schemaKey]["/record_trace"], { datatypes });
-
     return () => {
       topicManager.unadvertise(context, publishTopics.goal);
       topicManager.unadvertise(context, publishTopics.point);
@@ -1080,6 +1084,86 @@ export function ThreeDeeRender(props: {
     context.publish("/record_trace", message);
   }, [context]);
 
+  const [parkingSlotSelectionActive, setParkingSlotSelectionActive] = useState(false);
+
+  const onClickSelectParkingSlot = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    if (context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf") {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+      return;
+    }
+
+    setParkingSlotSelectionActive(true);
+    // Create unique ID for temporary parking slot
+    const tempSlotId = `parking-slot-temp-${Date.now()}`;
+
+    // Create a temporary parking slot
+    const parkingExtension = Array.from(renderer?.sceneExtensions.values() || [])
+      .find(ext => ext.extensionId === "foxglove.ParkingSlots") as ParkingSlots | undefined;
+
+    if (!parkingExtension) {
+      log.error("ParkingSlots extension not found");
+      return;
+    }
+
+    // Create a temporary draggable parking slot
+    parkingExtension.createTemporarySlot(tempSlotId, {
+      onCancel: () => {
+        // Remove the temporary slot when canceled
+        parkingExtension.removeParkingSlot(tempSlotId);
+        setParkingSlotSelectionActive(false);
+      },
+      onConfirm: (position, rotation) => {
+        // Publish the parking slot position and orientation
+        try {
+          const renderFrameId = renderer?.renderFrameId;
+          const publishFrameId = renderer?.publishFrameId ?? renderFrameId;
+
+          if (!publishFrameId) {
+            log.error("No publish frame ID available");
+            setParkingSlotSelectionActive(false);
+            return;
+          }
+
+          // Create the message - similar structure to clicked_pose
+          let pose = makePose();
+          pose.position.x = position.x;
+          pose.position.y = position.y;
+          pose.position.z = position.z;
+          pose.orientation.x = 0;
+          pose.orientation.y = 0;
+          pose.orientation.z = rotation;
+          pose.orientation.w = 1;
+
+          const message =
+            context.dataSourceProfile === "protobuf"?
+              makeFoxglovePoseMessage(pose, publishFrameId) :
+              makePoseMessage(pose, publishFrameId);
+
+          console.debug("[ParkingSlot] Publishing parking slot position:", message);
+          // Publish to a new topic specifically for parking slots
+          if (context.publish) {
+            context.publish(publishTopics.goal, message);
+          }
+
+          // Make the slot non-draggable
+          parkingExtension.finalizeSlot(tempSlotId);
+
+          log.info("Published parking slot position");
+          setParkingSlotSelectionActive(false);
+        } catch (error) {
+          log.error("Failed to publish parking slot position:", error);
+          setParkingSlotSelectionActive(false);
+        }
+      }
+    });
+  }, [context, renderer]);
+
   const [cameraLocked, setCameraLocked] = useState(false);
 
   const onClickParkingModeView = useCallback(() => {
@@ -1215,6 +1299,7 @@ export function ThreeDeeRender(props: {
             onClickRecordTraceStartButton={onClickRecordTraceStartButton}
             onClickRecordTraceStopButton={onClickRecordTraceStopButton}
             onClickParkingModeView={onClickParkingModeView}
+            onClickSelectParkingSlot={onClickSelectParkingSlot}
             cameraLocked={cameraLocked}
             publishClickType={renderer?.publishClickTool.publishClickType ?? "point"}
             onChangePublishClickType={(type) => {
@@ -1226,6 +1311,7 @@ export function ThreeDeeRender(props: {
             receivedControlMessage={receivedControlMessage}
             receivedPlanMessage={receivedPlanMessage}
             receivedControlCmdMessage={receivedControlCmdMessage}
+            parkingSlotSelectionActive={parkingSlotSelectionActive}
           />
         </RendererContext.Provider>
       </div>

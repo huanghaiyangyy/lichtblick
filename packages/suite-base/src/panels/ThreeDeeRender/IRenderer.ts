@@ -70,6 +70,8 @@ export type RendererEvents = {
   resetViewChanged: (renderer: IRenderer) => void;
   resetAllFramesCursor: (renderer: IRenderer) => void;
   hudItemsChanged: (renderer: IRenderer) => void;
+  /** Newly added custom events */
+  publishFrameChanged: (publishFrameId: string | undefined, renderer: IRenderer) => void;
 };
 
 export type FollowMode = "follow-pose" | "follow-position" | "follow-none";
