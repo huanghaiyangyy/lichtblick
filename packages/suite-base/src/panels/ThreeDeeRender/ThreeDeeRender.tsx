@@ -56,6 +56,7 @@ import {
   makePointMessage,
   makePoseEstimateMessage,
   makePoseMessage,
+  makeFoxglovePoseMessage,
   pointTransform,
   poseTransform,
 } from "./publish";
@@ -835,7 +836,7 @@ export function ThreeDeeRender(props: {
                   w: 1,
                 },
               };
-              const message = makePoseMessage(pose, publishFrameId);
+              const message = makeFoxglovePoseMessage(pose, publishFrameId);
               context.publish(publishTopics.point, message);
             } else {
               let point = pointTransform(event.point, renderFrameId, publishFrameId, renderer);
@@ -846,14 +847,18 @@ export function ThreeDeeRender(props: {
           }
           case "pose": {
             let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
-            const message = makePoseMessage(pose, publishFrameId);
+            const message =
+              context.dataSourceProfile === "protobuf"?
+                makeFoxglovePoseMessage(pose, publishFrameId) :
+                makePoseMessage(pose, publishFrameId);
+            console.debug("[Publish] pose message:", message);
             context.publish(publishTopics.goal, message);
             break;
           }
           case "pose_estimate": {
             if (context.dataSourceProfile === "protobuf"){
               let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
-              const message = makePoseMessage(pose, publishFrameId);
+              const message = makeFoxglovePoseMessage(pose, publishFrameId);
               context.publish(publishTopics.pose, message);
             } else {
               let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);

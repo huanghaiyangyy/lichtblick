@@ -86,6 +86,20 @@ export function makePoseEstimateMessage(
   };
 }
 
+export function makeFoxglovePoseMessage(pose: Pose, frameId: string): unknown {
+  const time = fromDate(new Date());
+  const seconds = Number(time.sec);
+  const nanoseconds = Number(time.nsec);
+  return {
+    timestamp: {
+      seconds: seconds,
+      nanos: nanoseconds,
+    },
+    frame_id: frameId,
+    pose,
+  };
+}
+
 export function pointTransform(point: Point, originalFrame: string, targetFrame: string, renderer: IRenderer | undefined): Point {
   let transformedPoint = point;
   if (targetFrame !== originalFrame) {
