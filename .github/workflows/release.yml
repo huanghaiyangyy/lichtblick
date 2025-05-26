@@ -32,6 +32,10 @@ jobs:
         run: yarn version minor
         working-directory: packages/suite
 
+      - name: Generate Protobuf
+        run: yarn generate-proto-definitions
+        working-directory: packages/protobuf-support
+
       - name: Install dependencies
         run: yarn install --immutable
 
@@ -47,6 +51,9 @@ jobs:
 
       - name: Build macOS version
         run: yarn run package:darwin
+
+      - name: Build web version
+        run: yarn run web:build:prod && cd web && mv .webpack lichblick_webpack && tar -zcvf lichblick_webpack-${{ env.new_version }}.tar.gz lichblick_webpack && mv lichblick_webpack-${{ env.new_version }}.tar.gz ../dist
 
       # Important to use [skip actions] to avoid triggering other verisoning workflows
       # https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/skipping-workflow-runs
@@ -74,6 +81,7 @@ jobs:
             dist/lichtblick-${{ env.new_version }}-linux-arm64.tar.gz
             dist/lichtblick-${{ env.new_version }}-mac-universal.dmg
             dist/lichtblick-${{ env.new_version }}-win.exe
+            dist/lichblick_webpack-${{ env.new_version }}.tar.gz
             dist/latest-linux.yml
             dist/latest-mac.yml
             dist/latest.yml

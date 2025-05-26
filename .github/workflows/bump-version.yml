@@ -1,9 +1,12 @@
 name: Auto Bump Version
 
+# on:
+#   push:
+#     branches:
+#       - main  # Trigger on push to main branch
+
 on:
-  push:
-    branches:
-      - main  # Trigger on push to main branch
+  workflow_dispatch:
 
 jobs:
   bump:
