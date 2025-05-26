@@ -11,6 +11,8 @@ const DEFAULT_RECTANGLE_COLOR = "rgba(255, 255, 255, 0.75)";
 const HANDLE_COLOR = 0x2c6ef6;
 const HANDLE_OPACITY = 0.7;
 
+const WHEEL_BASE_ID4 = 2.9231; // Wheelbase of the car in meters
+
 export type DraggableParkingSlotOptions = {
   id: string;
   renderer: IRenderer;
@@ -346,7 +348,14 @@ export class DraggableParkingSlot extends Renderable {
   }
 
   public getPosition(): THREE.Vector3 {
-    return this.#rectangle.position;
+    const wheelBase = WHEEL_BASE_ID4; // Use the constant for ID.4
+    const offset = new THREE.Vector3(wheelBase / 2, 0, 0);
+    const offsetWithRotation = offset.clone().applyAxisAngle(
+      new THREE.Vector3(0, 0, 1),
+      this.#rectangle.rotation.z
+    );
+    const rearCenter = this.#rectangle.position.clone().sub(offsetWithRotation);
+    return rearCenter;
   }
 
   public getRotation(): number {
