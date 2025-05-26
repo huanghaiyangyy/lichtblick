@@ -7,15 +7,15 @@ import React from "react";
 import Logger from "@lichtblick/log";
 import { SettingsTreeAction, SettingsTreeFields } from "@lichtblick/suite";
 
-import { SceneExtension } from "../SceneExtension";
-import { SettingsTreeEntry } from "../SettingsManager";
-import type { IRenderer } from "../IRenderer";
-import { BaseUserData, Renderable } from "../Renderable";
+import { SceneExtension } from "../../SceneExtension";
+import { SettingsTreeEntry } from "../../SettingsManager";
+import type { IRenderer } from "../../IRenderer";
+import { BaseUserData, Renderable } from "../../Renderable";
 import { DraggableParkingSlot } from "./DraggableParkingSlot";
-import { CustomLayerSettings } from "../settings";
+import { CustomLayerSettings } from "../../settings";
 import { makePose, xyzrpyToPose } from "@lichtblick/suite-base/panels/ThreeDeeRender/transforms";
-import ReactPortalService from "../utils/ReactPortalService";
-import {ParkingSlotConfirmation} from "../components/ParkingSlotConfirmation";
+import ReactPortalService from "../../utils/ReactPortalService";
+import {ParkingSlotConfirmation} from "../../components/ParkingSlotConfirmation";
 
 const log = Logger.getLogger(__filename);
 
