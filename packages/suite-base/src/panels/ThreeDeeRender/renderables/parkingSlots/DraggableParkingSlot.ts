@@ -230,6 +230,7 @@ export class DraggableParkingSlot extends Renderable {
   }
 
   #setupDragControls(): void {
+    this.#dragControls.dispose(); // Clean up any previous controls
     this.#dragControls = new DragControls(
       this.#draggableObjects,
       this.renderer.cameraHandler.getActiveCamera(),
@@ -297,6 +298,7 @@ export class DraggableParkingSlot extends Renderable {
   }
 
   #setupRotationControls(): void {
+    this.#rotationControls.dispose(); // Clean up any previous controls
     this.#rotationControls = new DragControls(
       [this.#rotationHandle],
       this.renderer.cameraHandler.getActiveCamera(),

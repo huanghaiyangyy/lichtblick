@@ -54,6 +54,11 @@ export type ParkingSlotUserData = BaseUserData & {
 
 export class ParkingSlotRenderable extends Renderable<ParkingSlotUserData> {
   public override dispose(): void {
+    for (const child of this.children) {
+      if (child instanceof DraggableParkingSlot) {
+        child.dispose();
+      }
+    }
     super.dispose();
   }
 }
@@ -221,6 +226,7 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
     // Handle deletes
     if (settings === undefined) {
       if (renderable != undefined) {
+        renderable.dispose();
         this.remove(renderable);
         this.renderables.delete(slotId);
       }
