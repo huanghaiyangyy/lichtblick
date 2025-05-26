@@ -22,7 +22,7 @@ const log = Logger.getLogger(__filename);
 const LAYER_ID = "parking-slot";
 const DEFAULT_PARKING_SLOT_LENGTH = 5.0;
 const DEFAULT_PARKING_SLOT_WIDTH = 2.5;
-const DEFAULT_PARKING_SLOT_COLOR = "rgba(255, 255, 255, 0.75)";
+const DEFAULT_PARKING_SLOT_COLOR = "rgba(0, 156, 230, 0.1)";
 
 export type LayerSettingsParkingSlot = CustomLayerSettings & {
   layerId: "parking-slot";

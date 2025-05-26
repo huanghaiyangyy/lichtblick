@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 import { DragControls } from "three/examples/jsm/controls/DragControls";
 
 import { stringToRgba } from "../../color";
@@ -7,9 +10,10 @@ import type { IRenderer } from "../../IRenderer";
 
 const HANDLE_SIZE = 0.3;
 const HANDLE_DISTANCE = 0.5; // Distance from rectangle edge
-const DEFAULT_RECTANGLE_COLOR = "rgba(255, 255, 255, 0.75)";
-const HANDLE_COLOR = 0x2c6ef6;
-const HANDLE_OPACITY = 0.7;
+const DEFAULT_RECTANGLE_COLOR = "rgba(0, 156, 230, 0.1)";
+const HANDLE_COLOR = 0x009ce6;
+const HANDLE_OPACITY = 0.9;
+const OUTLINE_OPACITY = 0.9;
 
 const WHEEL_BASE_ID4 = 2.9231; // Wheelbase of the car in meters
 
@@ -27,7 +31,7 @@ export class DraggableParkingSlot extends Renderable {
   #length: number;
   #width: number;
   #rectangle: THREE.Mesh;
-  #outline: THREE.LineSegments;
+  #outline: LineSegments2;
   #color: string;
   #rotationHandle: THREE.Mesh;
   #mouseMoveHandler: (event: MouseEvent) => void = () => {};
@@ -65,26 +69,34 @@ export class DraggableParkingSlot extends Renderable {
     const rectangleMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(this.#color),
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.1,
       side: THREE.DoubleSide,
     });
     this.#rectangle = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
     this.#rectangle.rotation.x = 0; // Lay flat on the XY plane
-    this.#rectangle.position.copy(options.initialPosition);
-
     // Create the outline
-    const outlineGeometry = new THREE.EdgesGeometry(rectangleGeometry);
-    const outlineMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
-    this.#outline = new THREE.LineSegments(outlineGeometry, outlineMaterial);
+    const edgesGeometry = new THREE.EdgesGeometry(rectangleGeometry);
+    const outlineGeometry = new LineSegmentsGeometry().fromEdgesGeometry(edgesGeometry);
+    const outlineMaterial = new LineMaterial({
+      color: 0x009ce6,
+      linewidth: 5,
+      opacity: OUTLINE_OPACITY,
+    });
+    // Set resolution for proper line width rendering
+    outlineMaterial.resolution.set(window.innerWidth, window.innerHeight);
+    this.#outline = new LineSegments2(outlineGeometry, outlineMaterial);
     this.#outline.rotation.x = 0;
     this.#outline.position.copy(options.initialPosition);
 
     // Create the rotation handle
-    const handleGeometry = new THREE.SphereGeometry(HANDLE_SIZE, 16, 16);
+    const handleGeometry = new THREE.CircleGeometry(HANDLE_SIZE, 16, 16);
+    const handleTexture = new THREE.TextureLoader().load("./texture/rotation1.png");
     const handleMaterial = new THREE.MeshBasicMaterial({
-      color: HANDLE_COLOR,
+      map: handleTexture,
       transparent: true,
       opacity: HANDLE_OPACITY,
+      side: THREE.DoubleSide,
+      depthWrite: false,
     });
     this.#rotationHandle = new THREE.Mesh(handleGeometry, handleMaterial);
     this.updateHandlePosition();
@@ -137,16 +149,24 @@ export class DraggableParkingSlot extends Renderable {
     this.#rotationControls.enabled = enable;
 
     if (!enable) {
+      const handleTexture = new THREE.TextureLoader().load("./texture/lock1.webp");
       this.#rotationHandle.material = new THREE.MeshBasicMaterial({
-        color: HANDLE_COLOR,
+        map: handleTexture,
+        color: 0xffffff,
         transparent: true,
-        opacity: 0.3,
+        opacity: 0.7,
+        side: THREE.DoubleSide,
+        depthWrite: false,
       });
     } else {
+      const handleTexture = new THREE.TextureLoader().load("./texture/rotation1.png");
       this.#rotationHandle.material = new THREE.MeshBasicMaterial({
+        map: handleTexture,
         color: HANDLE_COLOR,
         transparent: true,
         opacity: HANDLE_OPACITY,
+        side: THREE.DoubleSide,
+        depthWrite: false,
       });
     }
   }
@@ -190,7 +210,8 @@ export class DraggableParkingSlot extends Renderable {
 
     // Update outline geometry
     this.#outline.geometry.dispose();
-    this.#outline.geometry = new THREE.EdgesGeometry(this.#rectangle.geometry);
+    const edgesGeometry = new THREE.EdgesGeometry(this.#rectangle.geometry);
+    this.#outline.geometry = new LineSegmentsGeometry().fromEdgesGeometry(edgesGeometry);
 
     // Update handle position
     this.updateHandlePosition();
@@ -204,6 +225,8 @@ export class DraggableParkingSlot extends Renderable {
       this.#slotCenter.y + handleOffset * Math.sin(this.#rectangle.rotation.z),
       this.#rectangle.position.z
     );
+
+    this.#rotationHandle.rotation.z = this.#rectangle.rotation.z - Math.PI / 2; // Handle points outward
   }
 
   #setupDragControls(): void {
@@ -319,6 +342,9 @@ export class DraggableParkingSlot extends Renderable {
       event.object.position.y = this.#slotCenter.y + handleDistance * Math.sin(newRotation);
 
       event.object.position.z = this.#rectangle.position.z;
+
+      // Keep the handle's rotation aligned with the rectangle
+      event.object.rotation.z = newRotation - Math.PI / 2; // Handle points outward
 
       this.renderer.queueAnimationFrame();
     });
