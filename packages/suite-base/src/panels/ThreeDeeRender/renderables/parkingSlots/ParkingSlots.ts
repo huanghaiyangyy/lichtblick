@@ -210,6 +210,20 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
     this.updateSettingsTree();
   };
 
+  #getCameraTarget(): THREE.Vector3 {
+    if (this.renderer.cameraHandler &&
+        typeof this.renderer.cameraHandler.getOrbitControlsTarget === 'function') {
+      return this.renderer.cameraHandler.getOrbitControlsTarget();
+    }
+
+    if (this.renderer.cameraHandler &&
+        (this.renderer.cameraHandler as any).controls?.target) {
+      return (this.renderer.cameraHandler as any).controls.target.clone();
+    }
+
+    return new THREE.Vector3(0, 0, 0);
+  }
+
   #handleTransformTreeUpdated = (): void => {
     this.updateSettingsTree();
   }
@@ -269,7 +283,32 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
       settings.position[2]
     );
 
-    const draggableSlot = new DraggableParkingSlot({
+    const cameraTarget = this.#getCameraTarget();
+    const cameraTargetPose = makePose();
+    cameraTargetPose.position.x = cameraTarget.x;
+    cameraTargetPose.position.y = cameraTarget.y;
+    cameraTargetPose.position.z = cameraTarget.z;
+    cameraTargetPose.orientation = new THREE.Quaternion();
+    let cameraTargetPoseInPublishFrame = makePose();
+    const currentTime = this.renderer.currentTime;
+
+    this.renderer.transformTree.apply(
+      cameraTargetPoseInPublishFrame,
+      cameraTargetPose,
+      this.renderer.publishFrameId || "",
+      this.renderer.fixedFrameId,
+      this.renderer.renderFrameId || "",
+      currentTime,
+      currentTime
+    );
+
+    const initPosition = new THREE.Vector3(
+      cameraTargetPoseInPublishFrame.position.x,
+      cameraTargetPoseInPublishFrame.position.y,
+      cameraTargetPoseInPublishFrame.position.z
+    );
+
+    const draggableSlot = new DraggableParkingSlot(initPosition, {
       id: instanceId,
       renderer: this.renderer,
       length: settings.length,

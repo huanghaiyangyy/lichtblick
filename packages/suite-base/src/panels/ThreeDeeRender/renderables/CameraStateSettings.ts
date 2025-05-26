@@ -678,4 +678,8 @@ export class CameraStateSettings extends SceneExtension implements ICameraHandle
   public setOrbitControlsEnabled(enabled: boolean): void {
     this.#controls.enabled = enabled;
   }
+
+  public getOrbitControlsTarget(): THREE.Vector3 {
+    return this.#controls.target.clone();
+  }
 }
