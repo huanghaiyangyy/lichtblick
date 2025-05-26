@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { DragControls } from "three/examples/jsm/controls/DragControls";
 
-import { stringToRgba } from "../color";
-import { Renderable } from "../Renderable";
-import type { IRenderer } from "../IRenderer";
+import { stringToRgba } from "../../color";
+import { Renderable } from "../../Renderable";
+import type { IRenderer } from "../../IRenderer";
 
 const HANDLE_SIZE = 0.3;
 const HANDLE_DISTANCE = 0.5; // Distance from rectangle edge

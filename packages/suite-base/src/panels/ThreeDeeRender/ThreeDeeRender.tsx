@@ -65,7 +65,7 @@ import { PublishClickEventMap } from "./renderables/PublishClickTool";
 import { DEFAULT_PUBLISH_SETTINGS } from "./renderables/PublishSettings";
 import { InterfaceMode } from "./types";
 import { TopicAdvertisementManager } from "@lichtblick/suite-base/panels/ThreeDeeRender/TopicAdvertisementManager";
-import { ParkingSlots } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/ParkingSlots";
+import { ParkingSlots } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/parkingSlots/ParkingSlots";
 import { makePose } from "@lichtblick/suite-base/panels/ThreeDeeRender/transforms";
 
 const log = Logger.getLogger(__filename);
