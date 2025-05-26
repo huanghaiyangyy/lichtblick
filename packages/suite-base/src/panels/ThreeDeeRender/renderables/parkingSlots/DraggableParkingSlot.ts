@@ -11,7 +11,6 @@ import type { IRenderer } from "../../IRenderer";
 const HANDLE_SIZE = 0.3;
 const HANDLE_DISTANCE = 0.5; // Distance from rectangle edge
 const DEFAULT_RECTANGLE_COLOR = "rgba(0, 156, 230, 0.1)";
-const HANDLE_COLOR = 0x009ce6;
 const HANDLE_OPACITY = 0.9;
 const OUTLINE_OPACITY = 0.9;
 
@@ -45,7 +44,7 @@ export class DraggableParkingSlot extends Renderable {
   #slotCenter = new THREE.Vector3();
   #enableDragging = true;
 
-  public constructor(options: DraggableParkingSlotOptions) {
+  public constructor(initPosition: THREE.Vector3, options: DraggableParkingSlotOptions) {
     super(options.id, options.renderer, {
       receiveTime: 0n,
       messageTime: 0n,
@@ -74,6 +73,8 @@ export class DraggableParkingSlot extends Renderable {
     });
     this.#rectangle = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
     this.#rectangle.rotation.x = 0; // Lay flat on the XY plane
+    this.#rectangle.position.copy(initPosition);
+    this.#slotCenter.copy(this.#rectangle.position);
     // Create the outline
     const edgesGeometry = new THREE.EdgesGeometry(rectangleGeometry);
     const outlineGeometry = new LineSegmentsGeometry().fromEdgesGeometry(edgesGeometry);
@@ -86,7 +87,7 @@ export class DraggableParkingSlot extends Renderable {
     outlineMaterial.resolution.set(window.innerWidth, window.innerHeight);
     this.#outline = new LineSegments2(outlineGeometry, outlineMaterial);
     this.#outline.rotation.x = 0;
-    this.#outline.position.copy(options.initialPosition);
+    this.#outline.position.copy(initPosition);
 
     // Create the rotation handle
     const handleGeometry = new THREE.CircleGeometry(HANDLE_SIZE, 16, 16);
@@ -118,8 +119,6 @@ export class DraggableParkingSlot extends Renderable {
     this.#draggableObjects = [this.#rectangle];
 
     this.#setupDragControls();
-
-    this.#slotCenter.copy(this.#rectangle.position);
     this.#setupRotationControls();
 
     this.renderer.on("cameraMove", this.#handleCameraMove);
@@ -152,9 +151,8 @@ export class DraggableParkingSlot extends Renderable {
       const handleTexture = new THREE.TextureLoader().load("./texture/lock1.webp");
       this.#rotationHandle.material = new THREE.MeshBasicMaterial({
         map: handleTexture,
-        color: 0xffffff,
         transparent: true,
-        opacity: 0.7,
+        opacity: HANDLE_OPACITY,
         side: THREE.DoubleSide,
         depthWrite: false,
       });
@@ -162,7 +160,6 @@ export class DraggableParkingSlot extends Renderable {
       const handleTexture = new THREE.TextureLoader().load("./texture/rotation1.png");
       this.#rotationHandle.material = new THREE.MeshBasicMaterial({
         map: handleTexture,
-        color: HANDLE_COLOR,
         transparent: true,
         opacity: HANDLE_OPACITY,
         side: THREE.DoubleSide,

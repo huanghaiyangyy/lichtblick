@@ -33,4 +33,6 @@ export interface ICameraHandler extends SceneExtension {
   handleResize(width: number, height: number, pixelRatio: number): void;
 
   setOrbitControlsEnabled?(enabled: boolean): void;
+
+  getOrbitControlsTarget?(): THREE.Vector3;
 }
