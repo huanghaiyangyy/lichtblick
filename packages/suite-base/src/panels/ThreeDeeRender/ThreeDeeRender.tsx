@@ -1130,15 +1130,20 @@ export function ThreeDeeRender(props: {
             return;
           }
 
+          // from euler angles to quaternion
+          const orientation = {
+            x: 0,
+            y: 0,
+            z: Math.sin(rotation / 2),
+            w: Math.cos(rotation / 2),
+          };
+
           // Create the message - similar structure to clicked_pose
           let pose = makePose();
           pose.position.x = position.x;
           pose.position.y = position.y;
           pose.position.z = position.z;
-          pose.orientation.x = 0;
-          pose.orientation.y = 0;
-          pose.orientation.z = rotation;
-          pose.orientation.w = 1;
+          pose.orientation = orientation;
 
           const message =
             context.dataSourceProfile === "protobuf"?
