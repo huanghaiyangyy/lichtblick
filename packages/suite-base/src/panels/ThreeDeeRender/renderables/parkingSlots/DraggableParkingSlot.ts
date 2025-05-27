@@ -34,6 +34,7 @@ export class DraggableParkingSlot extends Renderable {
   #outline: LineSegments2;
   #color: string;
   #rotationHandle: THREE.Mesh;
+  #switchButton: THREE.Mesh;
   #mouseMoveHandler: (event: MouseEvent) => void = () => {};
   #mouseUpHandler: () => void = () => {};
   #raycaster = new THREE.Raycaster();
@@ -121,25 +122,42 @@ export class DraggableParkingSlot extends Renderable {
     this.#rotationHandle = new THREE.Mesh(handleGeometry, handleMaterial);
     this.updateHandlePosition();
 
+    // Create the switch button (optional, can be used for toggling slot state)
+    const switchGeometry = new THREE.CircleGeometry(HANDLE_SIZE, 16, 16);
+    const switchTexture = new THREE.TextureLoader().load("./texture/switch.webp");
+    const switchMaterial = new THREE.MeshBasicMaterial({
+      map: switchTexture,
+      transparent: true,
+      opacity: HANDLE_OPACITY,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.#switchButton = new THREE.Mesh(switchGeometry, switchMaterial);
+    this.updateSwitchPosition();
+
     if (options.initialRotation) {
       this.#rectangle.rotation.z = options.initialRotation;
       this.#outline.rotation.z = options.initialRotation;
       this.updateHandlePosition();
+      this.updateSwitchPosition();
     }
 
     this.add(this.#rectangle);
     this.add(this.#carLayer);
     this.add(this.#outline);
     this.add(this.#rotationHandle);
+    this.add(this.#switchButton);
 
     this.#rectangle.userData.pickable = true;
     this.#rotationHandle.userData.pickable = true;
+    this.#switchButton.userData.pickable = true;
 
     // Set up the draggable objects for DragControls
     this.#draggableObjects = [this.#rectangle];
 
     this.#setupDragControls();
     this.#setupRotationControls();
+    this.#setupClickHandlers();
 
     this.renderer.on("cameraMove", this.#handleCameraMove);
   }
@@ -147,8 +165,6 @@ export class DraggableParkingSlot extends Renderable {
   public override dispose(): void {
     this.renderer.off("cameraMove", this.#handleCameraMove);
     this.#cleanupInteractivity();
-    this.#dragControls.dispose();
-    this.#rotationControls.dispose();
 
     this.#rectangle.geometry.dispose();
     (this.#rectangle.material as THREE.Material).dispose();
@@ -161,6 +177,9 @@ export class DraggableParkingSlot extends Renderable {
 
     this.#rotationHandle.geometry.dispose();
     (this.#rotationHandle.material as THREE.Material).dispose();
+
+    this.#switchButton.geometry.dispose();
+    (this.#switchButton.material as THREE.Material).dispose();
 
     super.dispose();
   }
@@ -181,6 +200,7 @@ export class DraggableParkingSlot extends Renderable {
         depthWrite: false,
       });
       this.#carLayer.visible = false;
+      this.#switchButton.visible = false;
     } else {
       const handleTexture = new THREE.TextureLoader().load("./texture/rotation1.png");
       this.#rotationHandle.material = new THREE.MeshBasicMaterial({
@@ -191,6 +211,7 @@ export class DraggableParkingSlot extends Renderable {
         depthWrite: false,
       });
       this.#carLayer.visible = true;
+      this.#switchButton.visible = true;
     }
   }
 
@@ -238,6 +259,9 @@ export class DraggableParkingSlot extends Renderable {
 
     // Update handle position
     this.updateHandlePosition();
+
+    // Update switch button position
+    this.updateSwitchPosition();
   }
 
   private updateHandlePosition(): void {
@@ -251,6 +275,85 @@ export class DraggableParkingSlot extends Renderable {
 
     this.#rotationHandle.rotation.z = this.#rectangle.rotation.z - Math.PI / 2; // Handle points outward
   }
+
+  private updateSwitchPosition(): void {
+    // Position the switch button at the center of the rectangle
+    this.#switchButton.position.set(
+      this.#slotCenter.x,
+      this.#slotCenter.y,
+      this.#rectangle.position.z + 0.02 // Slightly above the rectangle
+    )
+
+
+    // Keep the switch button's orientation consistent
+    this.#switchButton.rotation.z = this.#rectangle.rotation.z;
+  }
+
+  #setupClickHandlers(): void {
+    this.renderer.gl.domElement.addEventListener("click", this.#handleClick);
+    this.renderer.gl.domElement.addEventListener("touchend", this.#handleTouch);
+  }
+
+  #handleClick = (event: MouseEvent): void => {
+    const camera = this.renderer.cameraHandler.getActiveCamera();
+    const canvas = this.renderer.gl.domElement;
+    const rect = canvas.getBoundingClientRect();
+
+    const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.#raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+    const intersects = this.#raycaster.intersectObject(this.#switchButton, false);
+
+    if (intersects.length > 0 && this.#enableDragging) {
+      // Rotate by Math.PI (180 degrees)
+      this.#rectangle.rotation.z += Math.PI;
+      this.#outline.rotation.z += Math.PI;
+      this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Maintain car orientation
+
+      // Update positions of handles
+      this.updateHandlePosition();
+      this.updateSwitchPosition();
+
+      this.renderer.queueAnimationFrame();
+    }
+  };
+
+  #handleTouch = (event: TouchEvent): void => {
+    // Prevent default to avoid any unwanted behavior
+    event.preventDefault();
+
+    if (event.changedTouches.length === 0) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return; // No touch available
+    }
+    const camera = this.renderer.cameraHandler.getActiveCamera();
+    const canvas = this.renderer.gl.domElement;
+    const rect = canvas.getBoundingClientRect();
+
+    const touchX = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+    const touchY = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.#raycaster.setFromCamera(new THREE.Vector2(touchX, touchY), camera);
+    const intersects = this.#raycaster.intersectObject(this.#switchButton, false);
+
+    if (intersects.length > 0 && this.#enableDragging) {
+      // Rotate by Math.PI (180 degrees)
+      this.#rectangle.rotation.z += Math.PI;
+      this.#outline.rotation.z += Math.PI;
+      this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Maintain car orientation
+
+      // Update positions of handles
+      this.updateHandlePosition();
+      this.updateSwitchPosition();
+
+      this.renderer.queueAnimationFrame();
+    }
+  };
 
   #setupDragControls(): void {
     this.#dragControls.dispose(); // Clean up any previous controls
@@ -306,6 +409,7 @@ export class DraggableParkingSlot extends Renderable {
       this.#outline.position.z = 0;
 
       this.updateHandlePosition();
+      this.updateSwitchPosition();
 
       this.renderer.queueAnimationFrame();
     });
@@ -363,6 +467,7 @@ export class DraggableParkingSlot extends Renderable {
       this.#rectangle.rotation.z = newRotation;
       this.#outline.rotation.z = newRotation;
       this.#carLayer.rotation.z = newRotation + Math.PI; // Rotate to face the rectangle
+      this.#switchButton.rotation.z = newRotation;
 
       // Keep the handle at fixed distance from center
       const handleDistance = (this.#length / 2) + HANDLE_DISTANCE;
@@ -387,9 +492,13 @@ export class DraggableParkingSlot extends Renderable {
   }
 
   #cleanupInteractivity(): void {
-    // Remove event listeners
+    // Remove interactivity listeners
     document.removeEventListener("mousemove", this.#mouseMoveHandler);
     document.removeEventListener("mouseup", this.#mouseUpHandler);
+    this.renderer.gl.domElement.removeEventListener("click", this.#handleClick);
+    this.renderer.gl.domElement.removeEventListener("touchend", this.#handleTouch);
+    this.#dragControls.dispose();
+    this.#rotationControls.dispose();
   }
 
   #handleCameraMove = (): void => {
