@@ -30,6 +30,7 @@ export class DraggableParkingSlot extends Renderable {
   #length: number;
   #width: number;
   #rectangle: THREE.Mesh;
+  #carLayer: THREE.Mesh;
   #outline: LineSegments2;
   #color: string;
   #rotationHandle: THREE.Mesh;
@@ -75,6 +76,24 @@ export class DraggableParkingSlot extends Renderable {
     this.#rectangle.rotation.x = 0; // Lay flat on the XY plane
     this.#rectangle.position.copy(initPosition);
     this.#slotCenter.copy(this.#rectangle.position);
+
+    // Create the car layer mesh (optional, can be used for visualizing the car)
+    const carGeometry = new THREE.PlaneGeometry(4.6, 2.174);  // Dimensions of ID.4 in meters
+    const carTexture = new THREE.TextureLoader().load("./texture/topview.png");
+    const carMaterial = new THREE.MeshBasicMaterial({
+      map: carTexture,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.#carLayer = new THREE.Mesh(carGeometry, carMaterial);
+    this.#carLayer.position.copy(this.#rectangle.position);
+    this.#carLayer.position.z = 0.01; // Position slightly above the rectangle
+    this.#carLayer.rotation.x = 0;
+    this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Rotate to face the rectangle
+
     // Create the outline
     const edgesGeometry = new THREE.EdgesGeometry(rectangleGeometry);
     const outlineGeometry = new LineSegmentsGeometry().fromEdgesGeometry(edgesGeometry);
@@ -109,6 +128,7 @@ export class DraggableParkingSlot extends Renderable {
     }
 
     this.add(this.#rectangle);
+    this.add(this.#carLayer);
     this.add(this.#outline);
     this.add(this.#rotationHandle);
 
@@ -133,6 +153,9 @@ export class DraggableParkingSlot extends Renderable {
     this.#rectangle.geometry.dispose();
     (this.#rectangle.material as THREE.Material).dispose();
 
+    this.#carLayer.geometry.dispose();
+    (this.#carLayer.material as THREE.Material).dispose();
+
     this.#outline.geometry.dispose();
     (this.#outline.material as THREE.Material).dispose();
 
@@ -147,6 +170,7 @@ export class DraggableParkingSlot extends Renderable {
     this.#dragControls.enabled = enable;
     this.#rotationControls.enabled = enable;
 
+    // parking slot is locked when it is confirmed
     if (!enable) {
       const handleTexture = new THREE.TextureLoader().load("./texture/lock1.webp");
       this.#rotationHandle.material = new THREE.MeshBasicMaterial({
@@ -156,6 +180,7 @@ export class DraggableParkingSlot extends Renderable {
         side: THREE.DoubleSide,
         depthWrite: false,
       });
+      this.#carLayer.visible = false;
     } else {
       const handleTexture = new THREE.TextureLoader().load("./texture/rotation1.png");
       this.#rotationHandle.material = new THREE.MeshBasicMaterial({
@@ -165,6 +190,7 @@ export class DraggableParkingSlot extends Renderable {
         side: THREE.DoubleSide,
         depthWrite: false,
       });
+      this.#carLayer.visible = true;
     }
   }
 
@@ -273,6 +299,8 @@ export class DraggableParkingSlot extends Renderable {
     this.#dragControls.addEventListener('drag', (event) => {
       this.#outline.position.copy(this.#rectangle.position);
       this.#slotCenter.copy(this.#rectangle.position);
+      this.#carLayer.position.copy(this.#rectangle.position);
+      this.#carLayer.position.z = 0.01;
 
       event.object.position.z = 0;
       this.#outline.position.z = 0;
@@ -334,6 +362,7 @@ export class DraggableParkingSlot extends Renderable {
       const newRotation = this.#startRotation + angleDelta;
       this.#rectangle.rotation.z = newRotation;
       this.#outline.rotation.z = newRotation;
+      this.#carLayer.rotation.z = newRotation + Math.PI; // Rotate to face the rectangle
 
       // Keep the handle at fixed distance from center
       const handleDistance = (this.#length / 2) + HANDLE_DISTANCE;
