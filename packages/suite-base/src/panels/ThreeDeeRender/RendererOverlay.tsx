@@ -14,9 +14,7 @@ import {
   MenuItem,
   Paper,
   Tooltip,
-  useTheme,
-  Slider,
-  Box
+  useTheme
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import React from "react";
@@ -43,6 +41,7 @@ import { Stats } from "./Stats";
 import { MouseEventObject } from "./camera";
 import { PublishClickType } from "./renderables/PublishClickTool";
 import { InterfaceMode } from "./types";
+import { StatusPanel } from "@lichtblick/suite-base/panels/ThreeDeeRender/components/statusPanel/StatusPanel";
 
 const PublishClickIcons: Record<PublishClickType, React.ReactNode> = {
   pose: <PublishGoalIcon fontSize="small" />,
@@ -110,88 +109,6 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-/**
- * 状态指示器组件，如果状态为true则显示绿色，否则显示红色
- * @param status - 状态值
- * @param size - 指示器大小
- * @returns 返回一个状态指示器组件
- * @example
- * StatusIndicator({ status: true, size: 8 })
- */
-function StatusIndicator({ status, size=8,} : { status: boolean; size?: number; }) : React.JSX.Element {
-  return (
-    <Box
-      component="span"
-      sx={{
-        display: 'inline-block',
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        backgroundColor: status ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)',
-        marginRight: 1,
-        verticalAlign: 'middle'
-      }}
-    />
-  );
-}
-
-/**
- * 自定义滑块组件，在定义的最小值和最大值范围内，可以用来显示信号值的变化
- * @param value - 信号值
- * @param min - 显示的最小值
- * @param max - 显示的最大值
- * @param step - 滑块移动步长
- * @param color - 滑块颜色
- * @returns 返回一个滑块组件
- * @example
- * CustomSlider({ value: 0.5, min: 0, max: 1, step: 0.01, color: 'rgba(178, 75, 226, 0.8)' })
- */
-function CustomSlider({
-  value,
-  min,
-  max,
-  step = 0.01,
-  color = "rgba(178, 75, 226, 0.8)",
-}: {
-  value: number;
-  min: number;
-  max: number;
-  step?:number;
-  color?: string;
- }) : React.JSX.Element {
-  const baseColor = tc(color);
-  return (
-    <Slider
-      value={value}
-      min={min}
-      max={max}
-      step={step}
-      valueLabelDisplay="auto"
-      valueLabelFormat={(v) => `${v.toFixed(2)}`}
-      scale={(x) => x * 100}
-      disabled
-      sx={{
-        width: 80,
-        display: 'inline-block',
-        verticalAlign: 'middle',
-        ml: 1,
-        '& .MuiSlider-thumb': {
-          transition: 'none',
-          width: 10,
-          height: 10,
-          backgroundColor: baseColor.toString(),
-        },
-        '& .MuiSlider-rail': {
-          backgroundColor: baseColor.darken(15).setAlpha(0.8).toString(),
-        },
-        '& .MuiSlider-track': {
-          backgroundColor: baseColor.lighten(15).setAlpha(0.8).toString(),
-        },
-      }}
-    />
-  );
-}
-
 type Props = {
   addPanel: LayoutActions["addPanel"];
   canPublish: boolean;
@@ -225,6 +142,9 @@ type Props = {
   receivedPlanMessage?: unknown; // 新增接收消息属性
   receivedControlCmdMessage?: unknown; // 收到 /control_cmd channel 下的消息
   parkingSlotSelectionActive?: boolean;
+  statusPanelTopics?: string[];
+  onStatusPanelTopicsChange?: (topics: string[]) => void;
+  receivedMessages?: Record<string, unknown>;
 };
 
 /**
@@ -390,100 +310,6 @@ export function RendererOverlay(props: Props): React.JSX.Element {
 
   const [displayText2, setDisplayText2] = useState(true);
 
-  //消息解析
-  const planMessageContent = useMemo(() => {
-    if (!props.receivedPlanMessage) {
-      return null;
-    }
-    try {
-      const msg = (props.receivedPlanMessage as any)?.message ?? props.receivedPlanMessage;
-      return (
-        <div style={{ position: 'relative', marginBottom: 6 }}>
-          {/* 标题和分隔线 */}
-          <div style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '1.0em',
-            marginBottom: 4,
-            fontWeight: 'bold',
-            fontFamily: 'monospace'
-          }}>
-            规划信息
-          </div>
-          <div style={{
-            borderBottom: '1px solid rgba(255,255,255,0.3)',
-            marginBottom: 4
-          }}/>
-
-          {`planning_status:  `}<StatusIndicator status={msg.planning_status === 0} />{`${planningStatusMapping(msg.planning_status)}\n`}
-          {`hybrid A* status: ${msg.hybrid_a_star_status_str}\n`}
-          {`replan_reason:    ${replanReasonMapping(msg.replan_reason)}\n`}
-          {`computation_time: ${safeNumberFormat(msg.computation_time, 2)} s\n`}
-        </div>
-      );
-    } catch (error) {
-      return "等待规划信号...";
-    }
-  }, [props.receivedPlanMessage]);
-
-  const controlMessageContent = useMemo(() => {
-    if (!props.receivedControlMessage) {
-      return null;
-    }
-    try {
-      const msg = (props.receivedControlMessage as any)?.message ?? props.receivedControlMessage;
-      return (
-        <div style={{ position: 'relative', marginBottom: 6 }}>
-          {/* 标题和分隔线 */}
-          <div style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '1.0em',
-            marginBottom: 4,
-            fontWeight: 'bold',
-            fontFamily: 'monospace'
-          }}>
-            控制信息
-          </div>
-          <div style={{
-            borderBottom: '1px solid rgba(255,255,255,0.3)',
-            marginBottom: 4
-          }}/>
-          {`control active:   `}<StatusIndicator status={Number(msg.control_active) === 1} />{`${Number(msg.control_active) === 1 ? "True" : "False"}\n`}
-          {`xbw lat status:   `}<StatusIndicator status={Number(msg.xbw_lat_status) <= 2} />{`${safeNumberFormat(msg.xbw_lat_status, 0)}\n`}
-          {`xbw lon status:   `}<StatusIndicator status={Number(msg.xbw_lon_status) <= 2} />{`${safeNumberFormat(msg.xbw_lon_status, 0)}\n`}
-          {`control status:   ${msg.control_status}\n`}
-          {`lat_err:          ${safeNumberFormat(msg.lat_err, 3)} m\n`}
-          {`yaw_err:          ${safeNumberFormat(msg.yaw_err, 3)} deg\n`}
-          {`speed:            ${safeNumberFormat(msg.current_speed_kph, 1)} m/s\n`}
-          {`gear:             ${gearMapping(msg.current_gear)}\n`}
-          {`target_kappa:     ${safeNumberFormat(msg.target_kappa, 3)}\n`}
-          {`current kappa:    ${safeNumberFormat(msg.current_steer_kappa, 3)}\n`}
-          {"steer:            "}<CustomSlider value={msg.current_steer_kappa} min={-0.3} max={0.3} step={0.01} color="rgba(163, 142, 255, 0.8)" /> {"\n"}
-        </div>
-      );
-    } catch (error) {
-      console.error("消息解析错误:", error);
-      return "等待控制信号...";
-    }
-  }, [props.receivedControlMessage]);
-
-  const controlCmdMessageContent = useMemo(() => {
-    if (!props.receivedControlCmdMessage) {
-      return null;
-    }
-    try {
-      const msg = (props.receivedControlCmdMessage as any)?.message ?? props.receivedControlCmdMessage;
-      return (
-        <div>
-          {`acceleration:     ${safeNumberFormat(msg.acceleration, 2)} m/s^2\n`}
-          {`acceleration:     `}<CustomSlider value={msg.acceleration} min={-3.0} max={3.0} color="rgba(163, 142, 255, 0.8)" />{"\n"}
-        </div>
-      );
-    } catch (error) {
-      console.error("消息解析错误:", error);
-      return "等待控制指令...";
-    }
-  }, [props.receivedControlCmdMessage]);
-
   const controlActivated = useMemo(() => {
     if (!props.receivedControlMessage) {
       return false;
@@ -497,72 +323,8 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     }
   }, [props.receivedControlMessage]);
 
-  function safeNumberFormat(value: unknown, decimals: number): string {
-    // console.log('[格式化] 原始值:', value, '类型:', typeof value);
-    const num = Number(value);
-    return Number.isFinite(num) ? num.toFixed(Math.min(Math.max(decimals, 0), 20)) : "--";
-  }
-
-  /**
-   * 将 gear 的值转换为对应的档位描述
-   * @param gear - 档位码（可选）
-   * @returns 对应的档位描述字符串
-   * @example
-   * gearMapping(5) // 返回 "P"
-   */
-  function gearMapping(gear?: number): string {
-    const map: Record<number, string> = {
-      5: "P",
-      6: "R",
-      7: "N",
-      8: "D",
-    };
-    return gear != null ? map[gear] ?? "未知" : "未知";
-  }
-
-  /**
-   * 将 planning_status 的值转换为对应的状态描述
-   * @param planning_status - 规划状态码（可选）
-   * @returns 对应的状态描述字符串
-   * @example
-   * planningStatusMapping(0) // 返回 "Success"
-   * planningStatusMapping(4) // 返回 "Hybrid A* start plan failed"
-   */
-  function planningStatusMapping(planning_status?: number): string {
-    const map: Record<number, string> = {
-      0: "Success",
-      1: "Input error",
-      2: "Envelope error",
-      3: "XY bounds error",
-      4: "Hybrid A* start plan failed",
-      5: "Path partition failed",
-      6: "Speed plan failed",
-      7: "Park in over success",
-      8: "Path switch waiting 3 seconds",
-      9: "Traj combiner failed",
-      10: "Parking finished",
-    };
-    return planning_status != null ? map[planning_status] ?? "未知" : "未知";
-  }
-
-  /**
-   * 将 replan_reason 的值转换为对应的原因描述
-   * @param replan_reason
-   * @returns 对应的原因描述字符串
-   * @example
-   * replanReasonMapping(1) // 返回 "replan pre traj invalid"
-   */
-  function replanReasonMapping(replan_reason?: number): string {
-    const map: Record<number, string> = {
-      0: "no replan",
-      1: "replan pre traj invalid",
-      2: "replan tracking error",
-      3: "replan target slot deviation",
-    };
-    return replan_reason != null ? map[replan_reason] ?? "未知" : "未知";
-  }
-
   const [isExpanded, setIsExpanded] = useState(false);
+  const [statusPanelEditMode, setStatusPanelEditMode] = useState(false);
 
   return (
     <>
@@ -600,32 +362,35 @@ export function RendererOverlay(props: Props): React.JSX.Element {
               color: "#ffffff",
               borderRadius: 6,
               fontFamily: "monospace",
-              width: isExpanded ? 260 : 0,
+              // More responsive width handling
+              width: isExpanded
+                ? (statusPanelEditMode
+                    ? 600 : 300)
+                : 0,
               height: isExpanded ? "auto" : 0,
+              maxHeight: isExpanded ? "calc(100vh - 80px)" : 0,
               minHeight: isExpanded ? 38 : 0,
               opacity: isExpanded ? 1 : 0,
-              overflow: "hidden",
+              overflow: isExpanded ? "visible" : "hidden", // Change from "hidden" to "visible"
               transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               visibility: isExpanded ? "visible" : "hidden",
+              // Add padding to ensure content doesn't touch edges
+              padding: isExpanded ? "0 0 0 0" : 0,
+              boxSizing: "border-box",
+              // Force scrollbar to appear when needed
+              overflowY: "auto",
+              // Add shadow to distinguish from background
+              boxShadow: "0 0 15px rgba(0, 0, 0, 0.5)",
             }}
           >
-            <div
-              style={{
-                padding: "8px 12px",
-                whiteSpace: "pre-wrap",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  textAlign: "left",
-                  whiteSpace: "pre"
-                }}
-              >
-                {[controlMessageContent, controlCmdMessageContent, planMessageContent].filter(Boolean).map((content, index) => (
-                  <div key={index}>{content}</div>
-                )) || "等待信号..."}
-              </div>
+            {/* Wrap StatusPanel in a container with proper overflow handling */}
+            <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
+              <StatusPanel
+                statusPanelTopics={props.statusPanelTopics}
+                onStatusPanelTopicsChange={props.onStatusPanelTopicsChange}
+                receivedMessages={props.receivedMessages}
+                onEditModeChange={(editMode) => setStatusPanelEditMode(editMode)}
+              />
             </div>
           </div>
         </div>

@@ -26,11 +26,8 @@ import {
   MessagePath,
   PrimitiveType,
 } from "@lichtblick/message-path";
-import * as PanelAPI from "@lichtblick/suite-base/PanelAPI";
 import { Autocomplete, IAutocomplete } from "@lichtblick/suite-base/components/Autocomplete";
-import useGlobalVariables, {
-  GlobalVariables,
-} from "@lichtblick/suite-base/hooks/useGlobalVariables";
+import { GlobalVariables } from "@lichtblick/suite-base/hooks/useGlobalVariables";
 
 import {
   traverseStructure,
@@ -39,6 +36,8 @@ import {
   validTerminatingStructureItem,
   StructureTraversalResult,
 } from "./messagePathsForDatatype";
+
+import { RosDatatypes } from "@lichtblick/suite-base/types/RosDatatypes";
 
 export function tryToSetDefaultGlobalVar(
   variableName: string,
@@ -103,7 +102,7 @@ function getExamplePrimitive(primitiveType: PrimitiveType) {
   }
 }
 
-export type MessagePathInputBaseProps = {
+export type MessagePathInputExtendedProps = {
   supportsMathModifiers?: boolean;
   path: string; // A path of the form `/topic.some_field[:]{id==42}.x`
   index?: number; // Optional index field which gets passed to `onChange` (so you don't have to create anonymous functions)
@@ -117,6 +116,10 @@ export type MessagePathInputBaseProps = {
   readOnly?: boolean;
   prioritizedDatatype?: string;
   variant?: TextFieldProps["variant"];
+  globalVariables?: GlobalVariables; // Optional global variables to use for autocompletion
+  setGlobalVariables?: (arg0: GlobalVariables) => void; // Optional function to set global variables
+  datatypes?: ReadonlyMap<string, unknown>; // Optional datatypes to use for autocompletion
+  topics?: readonly { name: string; schemaName: string | undefined; aliasedFromName?: string }[]; // Optional topics to use for autocompletion
 };
 
 const useStyles = makeStyles()({
@@ -141,14 +144,9 @@ const useStyles = makeStyles()({
  * avoid creating anonymous functions on every render (which will prevent the component from
  * rendering unnecessarily).
  */
-export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
-  props: MessagePathInputBaseProps,
+export default React.memo<MessagePathInputExtendedProps>(function MessagePathInput_(
+  props: MessagePathInputExtendedProps,
 ) {
-  const { globalVariables, setGlobalVariables } = useGlobalVariables();
-  const { datatypes, topics } = PanelAPI.useDataSourceInfo();
-
-  console.debug("[MessagePathInput] datatypes:", datatypes, "topics:", topics);
-
   const {
     supportsMathModifiers,
     path,
@@ -159,11 +157,15 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
     inputStyle,
     disableAutocomplete = false,
     variant = "standard",
+    globalVariables = {},
+    setGlobalVariables = () => {},
+    datatypes,
+    topics = []
   } = props;
   const { classes } = useStyles();
 
   const messagePathStructuresForDataype = useMemo(
-    () => messagePathStructures(datatypes),
+    () => messagePathStructures(datatypes as RosDatatypes),
     [datatypes],
   );
   /** A map from each possible message path to the corresponding MessagePathStructureItem */
@@ -326,7 +328,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
     return undefined;
   }, [invalidGlobalVariablesVariable, structureTraversalResult, validTypes, rosPath, topic]);
 
-  const structures = useMemo(() => messagePathStructures(datatypes), [datatypes]);
+  const structures = useMemo(() => messagePathStructures(datatypes as RosDatatypes), [datatypes]);
 
   const { autocompleteItems, autocompleteFilterText, autocompleteRange } = useMemo(() => {
     if (disableAutocomplete) {

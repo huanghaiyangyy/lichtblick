@@ -64,6 +64,7 @@ export function useMessagePipelineGetter(): () => MessagePipelineContext {
 
 export function useMessagePipeline<T>(selector: (arg0: MessagePipelineContext) => T): T {
   const store = useGuaranteedContext(ContextInternal);
+  console.debug("[MessagePipeline] useMessagePipeline called with selector, state.public:", store.getState().public);
   return useStore(
     store,
     useCallback((state) => selector(state.public), [selector]),

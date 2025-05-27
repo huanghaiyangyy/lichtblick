@@ -1294,6 +1294,58 @@ export function ThreeDeeRender(props: {
     context.dataSourceProfile === "ros1" || context.dataSourceProfile === "ros2" || context.dataSourceProfile === "protobuf";
   const canPublish = context.publish != undefined && isRosDataSource;
 
+  const [statusPanelTopics, setStatusPanelTopics] = useState<string[]>(
+    ["control_debug", "control_cmd", "planning_debug"].filter(Boolean),
+  );
+
+  const [receivedMessages, setReceivedMessages] = useState<Record<string, unknown>>({});
+
+  const handleStatusPanelTopicsChange = useCallback((newTopics: string[]) => {
+    setStatusPanelTopics(newTopics);
+  }, [renderer]);
+
+  // Subscribe to status panel topics
+  useEffect(() => {
+    if (!topicsToSubscribe) {
+      return;
+    }
+
+    // Add status panel topics to subscriptions
+    const allSubscriptions = [...topicsToSubscribe];
+
+    // Add any status panel topics that aren't already in topicsToSubscribe
+    for (const topic of statusPanelTopics) {
+      if (!topicsToSubscribe.some(sub => sub.topic === topic)) {
+        allSubscriptions.push({ topic, preload: false });
+      }
+    }
+
+    // Subscribe to all topics
+    context.subscribe(allSubscriptions);
+  }, [context, topicsToSubscribe, statusPanelTopics]);
+
+  // Handle messages
+  useEffect(() => {
+    if (!renderer || !currentFrameMessages) return;
+
+    // Use functional update to avoid dependency on previous state
+    setReceivedMessages((prevMessages) => {
+      const newMessages = { ...prevMessages };
+
+      currentFrameMessages.forEach((message) => {
+        // Store message by topic
+        newMessages[message.topic] = message;
+
+        // Add message to renderer for visualization
+        renderer.addMessageEvent(message);
+      });
+
+      return newMessages;
+    });
+
+    renderRef.current.needsRender = true;
+  }, [currentFrameMessages, renderer]);
+
   return (
     <ThemeProvider isDark={colorScheme === "dark"}>
       <div style={PANEL_STYLE} onKeyDown={onKeyDown}>
@@ -1344,6 +1396,9 @@ export function ThreeDeeRender(props: {
             receivedPlanMessage={receivedPlanMessage}
             receivedControlCmdMessage={receivedControlCmdMessage}
             parkingSlotSelectionActive={parkingSlotSelectionActive}
+            statusPanelTopics={statusPanelTopics}
+            onStatusPanelTopicsChange={handleStatusPanelTopicsChange}
+            receivedMessages={receivedMessages}
           />
         </RendererContext.Provider>
       </div>
