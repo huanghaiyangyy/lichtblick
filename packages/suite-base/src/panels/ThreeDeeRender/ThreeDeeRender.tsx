@@ -921,14 +921,27 @@ export function ThreeDeeRender(props: {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
+    // Control_switch定义，0退控制，2进入控制，4进入四维的原车控制
+    // Start 先发0，然后1s后发2；
     const message = {
-      data: 2,
+      data: 0,
     };
     try{
       context.publish("/control_switch", message);
     } catch (error) {
       console.error("[Publish] Error publishing message:", error);
     }
+    // sleep 2s
+    setTimeout(() => {
+      const message = {
+        data: 2,
+      };
+      try{
+        context.publish!("/control_switch", message);
+      } catch (error) {
+        console.error("[Publish] Error publishing message:", error);
+      }
+    }, 1000);
   }, [context]);
 
   const onClickStopButton = useCallback(() => {
@@ -946,6 +959,20 @@ export function ThreeDeeRender(props: {
       data: 0,
     };
     context.publish("/control_switch", message);
+
+    // Control_switch定义，0退控制，2进入控制，4进入四维的原车控制
+    // Stop 先发0，2s后发4
+    // sleep 2s
+    setTimeout(() => {
+      const message = {
+        data: 4,
+      };
+      try{
+        context.publish!("/control_switch", message);
+      } catch (error) {
+        console.error("[Publish] Error publishing message:", error);
+      }
+    }, 2000);
   }, [context]);
 
   const onClickFrontParkingButton = useCallback(() => {
