@@ -866,7 +866,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                 variant="outlined"
                 onClick={props.onClickSelectParkingSlot}
                 sx={{
-                  minWidth: 72,
+                  minWidth: 100,
                   width: "100%",
                   height: 32,
                   color: props.parkingSlotSelectionActive ? "success.main" : "inherit", // Change color when active
@@ -896,7 +896,38 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                   },
                 }}
               >
-                {t(props.parkingSlotSelectionActive ? "定位中" as any : "选车位" as any)}
+                {t(props.parkingSlotSelectionActive ? "定位中" as any : "自定义车位" as any)}
+              </Button>
+            </div>
+          )}
+          {publishControls && (
+            <div>
+              <Button
+                variant="outlined"
+                onClick={props.onClickPublish}
+                sx={{
+                  minWidth: 72,
+                  width: "100%",
+                  height: 32,
+                  color: "inherit",
+                  border: "1px solid",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark" ? "rgba(255,255,255,0.23)" : "rgba(0,0,0,0.23)",
+                  boxShadow: (theme) => theme.shadows[1], // 添加与3D按钮相同的阴影
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    boxShadow: (theme) => theme.shadows[4], // 悬停时增强阴影
+                    borderColor: "currentColor",
+                  },
+                  "&:active": {
+                    backgroundColor: (theme) =>
+                      tc(theme.palette.secondary.dark).setAlpha(0.5).toString(),
+                    transform: "scale(0.98)",
+                    boxShadow: theme.shadows[2],
+                  },
+                }}
+              >
+                {t("选车位" as any)}
               </Button>
             </div>
           )}
