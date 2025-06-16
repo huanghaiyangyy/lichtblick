@@ -224,60 +224,60 @@ export class CoordinateFrame<ID extends AnyFrameId = UserFrameId> {
     const transformCount = this.#transforms.size;
     if (transformCount === 0) {
       return false;
-    } else if (transformCount === 1) {
+    } else{
       // If only a single transform exists, check if `time` is before or equal to
       // `latestTime + maxDelta`
+      // 每次都返回最新的transform
       const [latestTime, latestTf] = this.#transforms.maxEntry()!;
-      if (time <= latestTime + maxDelta) {
-        outLower[0] = outUpper[0] = latestTime;
-        outLower[1] = outUpper[1] = latestTf;
-        return true;
-      }
-      return false;
-    }
-
-    const index = this.#transforms.binarySearch(time);
-    if (index >= 0) {
-      // If the time is exactly on an existing transform, return it
-      const [, tf] = this.#transforms.at(index)!;
+      maxDelta;
+      latestTime;
       outLower[0] = outUpper[0] = time;
-      outLower[1] = outUpper[1] = tf;
+      outLower[1] = outUpper[1] = latestTf;
       return true;
     }
 
-    const greaterThanIndex = ~index;
-    if (greaterThanIndex >= this.#transforms.size) {
-      // If the time is greater than all existing transforms, return the last
-      // transform
-      const [latestTime, latestTf] = this.#transforms.maxEntry()!;
-      if (time <= latestTime + maxDelta) {
-        outLower[0] = outUpper[0] = latestTime;
-        outLower[1] = outUpper[1] = latestTf;
-        return true;
-      }
-      return false;
-    }
+    // const index = this.#transforms.binarySearch(time);
+    // if (index >= 0) {
+    //   // If the time is exactly on an existing transform, return it
+    //   const [, tf] = this.#transforms.at(index)!;
+    //   outLower[0] = outUpper[0] = time;
+    //   outLower[1] = outUpper[1] = tf;
+    //   return true;
+    // }
 
-    const lessThanIndex = greaterThanIndex - 1;
-    if (lessThanIndex < 0) {
-      // If the time is less than all existing transforms, return the first
-      // transform
-      const [earliestTime, earliestTf] = this.#transforms.minEntry()!;
-      if (earliestTime + maxDelta >= time) {
-        outLower[0] = outUpper[0] = earliestTime;
-        outLower[1] = outUpper[1] = earliestTf;
-        return true;
-      }
-      return false;
-    }
+    // const greaterThanIndex = ~index;
+    // if (greaterThanIndex >= this.#transforms.size) {
+    //   // If the time is greater than all existing transforms, return the last
+    //   // transform
+    //   const [latestTime, latestTf] = this.#transforms.maxEntry()!;
+    //   if (time <= latestTime + maxDelta) {
+    //     outLower[0] = outUpper[0] = latestTime;
+    //     outLower[1] = outUpper[1] = latestTf;
+    //     return true;
+    //   }
+    //   return false;
+    // }
 
-    const [lteTime, lteTf] = this.#transforms.at(lessThanIndex)!;
-    const [gtTime, gtTf] = this.#transforms.at(greaterThanIndex)!;
-    outLower[0] = lteTime;
-    outLower[1] = lteTf;
-    outUpper[0] = gtTime;
-    outUpper[1] = gtTf;
-    return true;
+    // const lessThanIndex = greaterThanIndex - 1;
+    // if (lessThanIndex < 0) {
+    //   // If the time is less than all existing transforms, return the first
+    //   // transform
+    //   const [earliestTime, earliestTf] = this.#transforms.minEntry()!;
+    //   if (earliestTime + maxDelta >= time) {
+    //     outLower[0] = outUpper[0] = earliestTime;
+    //     outLower[1] = outUpper[1] = earliestTf;
+    //     return true;
+    //   }
+    //   return false;
+    // }
+
+    // const [lteTime, lteTf] = this.#transforms.at(lessThanIndex)!;
+    // const [gtTime, gtTf] = this.#transforms.at(greaterThanIndex)!;
+    // outLower[0] = lteTime;
+    // outLower[1] = lteTf;
+    // outUpper[0] = gtTime;
+    // outUpper[1] = gtTf;
+    // return true;
   }
 
   /**
