@@ -43,6 +43,7 @@ import { Stats } from "./Stats";
 import { MouseEventObject } from "./camera";
 import { PublishClickType } from "./renderables/PublishClickTool";
 import { InterfaceMode } from "./types";
+// import { useTopicPublishFrequencies } from '../../hooks/useTopicPublishFrequences';
 
 const PublishClickIcons: Record<PublishClickType, React.ReactNode> = {
   pose: <PublishGoalIcon fontSize="small" />,
@@ -221,9 +222,12 @@ type Props = {
   publishActive: boolean;
   publishClickType: PublishClickType;
   timezone: string | undefined;
-  receivedControlMessage?: unknown; // 新增接收消息属性
-  receivedPlanMessage?: unknown; // 新增接收消息属性
-  receivedControlCmdMessage?: unknown; // 收到 /control_cmd channel 下的消息
+  receivedControlMessage?: unknown;
+  receivedPlanMessage?: unknown;
+  receivedControlCmdMessage?: unknown;
+  receivedParkingSlotsMessage?: unknown;
+  receivedVisGridMapMessage?: unknown;
+  receivedVehicleOdomMessage?: unknown;
   parkingSlotSelectionActive?: boolean;
 };
 
@@ -233,6 +237,14 @@ type Props = {
 export function RendererOverlay(props: Props): React.JSX.Element {
   const { t } = useTranslation("threeDee");
   const { classes } = useStyles();
+
+  // const frequencies = useTopicPublishFrequencies(); // 获取主题帧率数据
+  // const parkingSlotsFrequency = frequencies['/parking_slots'] || 0;
+  // const visGridMapFrequency = frequencies['/vis_grid_map'] || 0;
+  // const vehicleOdomFrequency = frequencies['/vehilce_odom'] || 0;
+  // const planningDebugFrequency = frequencies['/planning_debug'] || 0;
+
+
   const [clickedPosition, setClickedPosition] = useState<{ clientX: number; clientY: number }>({
     clientX: 0,
     clientY: 0,
@@ -414,16 +426,86 @@ export function RendererOverlay(props: Props): React.JSX.Element {
             marginBottom: 4
           }}/>
 
-          {`planning_status:  `}<StatusIndicator status={msg.planning_status === 0} />{`${planningStatusMapping(msg.planning_status)}\n`}
-          {`hybrid A* status: ${msg.hybrid_a_star_status_str}\n`}
-          {`replan_reason:    ${replanReasonMapping(msg.replan_reason)}\n`}
-          {`computation_time: ${safeNumberFormat(msg.computation_time, 2)} s\n`}
+          {`planning_status:  `}<StatusIndicator status={msg.planning_status === 0} />{`${msg.planning_status_str}\n`}
+          {`hybrid A* status: ${msg.hybrid_astar_status_str}\n`}
+          {`replan_reason:    ${msg.replan_reason_str_history}\n`}
+          {`length buffer:    ${msg.planning_inflation_length}\n`}
+          {`width buffer:     ${msg.planning_inflation_width}\n`}
+          {`gear change:      ${msg.current_gear_stroke} of ${msg.total_gear_stroke} \n`}
+          {`hybrid A* time:   ${safeNumberFormat(msg.hybrid_a_star_search_time,3)}\n`}
+          {`Totoal time:      ${safeNumberFormat(msg.computation_time, 2)} s\n`}
+          {`Debug msg time:   ${msg.header?.timestamp_sec ?? "--"} \n`}
         </div>
       );
     } catch (error) {
       return "等待规划信号...";
     }
   }, [props.receivedPlanMessage]);
+
+// 解析 /vis_grid_map 的 timestamp 信息
+const visGridMapTimestampContent = useMemo(() => {
+  if (!props.receivedVisGridMapMessage) {
+    return null;
+  }
+  try {
+    const msg = (props.receivedVisGridMapMessage as any)?.message ?? props.receivedVisGridMapMessage;
+    const sec = msg.timestamp?.sec ?? "--";
+    const nsec = msg.timestamp?.nsec ?? "--";
+    return  (
+        <div style={{ position: 'relative', marginBottom: 6 }}>
+          {/* 标题和分隔线 */}
+          <div style={{
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: '1.0em',
+            marginBottom: 4,
+            fontWeight: 'bold',
+            fontFamily: 'monospace'
+          }}>
+            感知定位信息
+          </div>
+          <div style={{
+            borderBottom: '1px solid rgba(255,255,255,0.3)',
+            marginBottom: 4
+          }}/>
+          {`vis_grid_map:     ${sec}.${nsec} s\n`}
+        </div>
+      );
+  } catch (error) {
+    console.error("消息解析错误:", error);
+    return "vis_grid_map 等待时间戳...";
+  }
+}, [props.receivedVisGridMapMessage]);
+
+// 解析 /parking_slots 的 timestamp 信息
+const parkingSlotsTimestampContent = useMemo(() => {
+  if (!props.receivedParkingSlotsMessage) {
+    return null;
+  }
+  try {
+    const msg = (props.receivedParkingSlotsMessage as any)?.message ?? props.receivedParkingSlotsMessage;
+    const timestampSec = msg.header?.timestamp_sec ?? "--";
+    return `parking_slots:    ${timestampSec} s\n`;
+  } catch (error) {
+    console.error("消息解析错误:", error);
+    return "parking_slots 等待时间戳...";
+  }
+}, [props.receivedParkingSlotsMessage]);
+
+// 解析 /vehicle_odom 的 timestamp 信息
+const vehicleOdomTimestampContent = useMemo(() => {
+  if (!props.receivedVehicleOdomMessage) {
+    return null;
+  }
+  try {
+    const msg = (props.receivedVehicleOdomMessage as any)?.message ?? props.receivedVehicleOdomMessage;
+    const sec = msg.timestamp?.sec ?? "--";
+    const nsec = msg.timestamp?.nsec ?? "--";
+    return `vehicle_odom:     ${sec}.${nsec} s\n`;
+  } catch (error) {
+    console.error("消息解析错误:", error);
+    return "vehicle_odom 等待时间戳...";
+  }
+}, [props.receivedVehicleOdomMessage]);
 
   const controlMessageContent = useMemo(() => {
     if (!props.receivedControlMessage) {
@@ -520,30 +602,30 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     return gear != null ? map[gear] ?? "未知" : "未知";
   }
 
-  /**
-   * 将 planning_status 的值转换为对应的状态描述
-   * @param planning_status - 规划状态码（可选）
-   * @returns 对应的状态描述字符串
-   * @example
-   * planningStatusMapping(0) // 返回 "Success"
-   * planningStatusMapping(4) // 返回 "Hybrid A* start plan failed"
-   */
-  function planningStatusMapping(planning_status?: number): string {
-    const map: Record<number, string> = {
-      0: "Success",
-      1: "Input error",
-      2: "Envelope error",
-      3: "XY bounds error",
-      4: "Hybrid A* start plan failed",
-      5: "Path partition failed",
-      6: "Speed plan failed",
-      7: "Park in over success",
-      8: "Path switch waiting 3 seconds",
-      9: "Traj combiner failed",
-      10: "Parking finished",
-    };
-    return planning_status != null ? map[planning_status] ?? "未知" : "未知";
-  }
+  // /**
+  //  * 将 planning_status 的值转换为对应的状态描述
+  //  * @param planning_status - 规划状态码（可选）
+  //  * @returns 对应的状态描述字符串
+  //  * @example
+  //  * planningStatusMapping(0) // 返回 "Success"
+  //  * planningStatusMapping(4) // 返回 "Hybrid A* start plan failed"
+  //  */
+  // function planningStatusMapping(planning_status?: number): string {
+  //   const map: Record<number, string> = {
+  //     0: "Success",
+  //     1: "Input error",
+  //     2: "Envelope error",
+  //     3: "XY bounds error",
+  //     4: "Hybrid A* start plan failed",
+  //     5: "Path partition failed",
+  //     6: "Speed plan failed",
+  //     7: "Park in over success",
+  //     8: "Path switch waiting 3 seconds",
+  //     9: "Traj combiner failed",
+  //     10: "Parking finished",
+  //   };
+  //   return planning_status != null ? map[planning_status] ?? "未知" : "未知";
+  // }
 
   /**
    * 将 replan_reason 的值转换为对应的原因描述
@@ -552,15 +634,15 @@ export function RendererOverlay(props: Props): React.JSX.Element {
    * @example
    * replanReasonMapping(1) // 返回 "replan pre traj invalid"
    */
-  function replanReasonMapping(replan_reason?: number): string {
-    const map: Record<number, string> = {
-      0: "no replan",
-      1: "replan pre traj invalid",
-      2: "replan tracking error",
-      3: "replan target slot deviation",
-    };
-    return replan_reason != null ? map[replan_reason] ?? "未知" : "未知";
-  }
+  // function replanReasonMapping(replan_reason?: number): string {
+  //   const map: Record<number, string> = {
+  //     0: "no replan",
+  //     1: "replan pre traj invalid",
+  //     2: "replan tracking error",
+  //     3: "replan target slot deviation",
+  //   };
+  //   return replan_reason != null ? map[replan_reason] ?? "未知" : "未知";
+  // }
 
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -600,7 +682,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
               color: "#ffffff",
               borderRadius: 6,
               fontFamily: "monospace",
-              width: isExpanded ? 260 : 0,
+              width: isExpanded ? 340 : 0,
               height: isExpanded ? "auto" : 0,
               minHeight: isExpanded ? 38 : 0,
               opacity: isExpanded ? 1 : 0,
@@ -622,7 +704,16 @@ export function RendererOverlay(props: Props): React.JSX.Element {
                   whiteSpace: "pre"
                 }}
               >
-                {[controlMessageContent, controlCmdMessageContent, planMessageContent].filter(Boolean).map((content, index) => (
+                {/* {`/parking_slots 帧率: ${parkingSlotsFrequency.toFixed(2)} Hz\n`}
+                {`/vis_grid_map 帧率: ${visGridMapFrequency.toFixed(2)} Hz\n`}
+                {`/vehilce_odom 帧率: ${vehicleOdomFrequency.toFixed(2)} Hz\n`}
+                {`/planning_debug 帧率: ${planningDebugFrequency.toFixed(2)} Hz\n`} */}
+                {[controlMessageContent,
+                  controlCmdMessageContent,
+                  planMessageContent,
+                  visGridMapTimestampContent,
+                  parkingSlotsTimestampContent,
+                  vehicleOdomTimestampContent].filter(Boolean).map((content, index) => (
                   <div key={index}>{content}</div>
                 )) || "等待信号..."}
               </div>

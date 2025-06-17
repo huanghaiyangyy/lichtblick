@@ -105,3 +105,10 @@ Contributions are welcome! Lichtblick is primarily built in TypeScript and React
 ## :star: Credits
 
 Lichtblick originally began as a fork of [Foxglove Studio](https://github.com/foxglove/studio), an open-source project developed by [Foxglove](https://foxglove.dev/).
+
+
+## : Update proto definitions
+
+cd packages/protobuf-support
+
+yarn generate-proto-definitions

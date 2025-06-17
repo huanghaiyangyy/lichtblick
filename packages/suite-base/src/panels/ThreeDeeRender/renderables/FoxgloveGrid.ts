@@ -815,8 +815,8 @@ function createMaterial(texture: THREE.DataTexture, topic: string): GridShaderMa
           colorOut.b = 0.0;
         } else {
           colorOut.r = 1.0;
-          colorOut.g = n;
-          colorOut.b = 0.0;
+          colorOut.g = 1.0-n;
+          colorOut.b = 1.0;
         }
         return sRGBToLinear(colorOut);
       }

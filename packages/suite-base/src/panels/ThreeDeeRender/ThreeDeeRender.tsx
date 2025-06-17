@@ -537,6 +537,33 @@ export function ThreeDeeRender(props: {
       });
     }
 
+    // 新增 /parking_slots 订阅
+    if (topics.some((t) => t.name === "/parking_slots")) {
+      newSubscriptions.push({
+        topic: "/parking_slots",
+        preload: false,
+        convertTo: undefined,
+      });
+    }
+
+    // 新增 /vis_grid_map 订阅
+    if (topics.some((t) => t.name === "/vis_grid_map")) {
+      newSubscriptions.push({
+        topic: "/vis_grid_map",
+        preload: false,
+        convertTo: undefined,
+      });
+    }
+
+    // 新增 /vehicle_odom 订阅
+    if (topics.some((t) => t.name === "/vehicle_odom")) {
+      newSubscriptions.push({
+        topic: "/vehicle_odom",
+        preload: false,
+        convertTo: undefined,
+      });
+    }
+
     // console.log('[调试] 生成新订阅列表:', newSubscriptions); // 新增调试日志
     // Sort the list to make comparisons stable
     newSubscriptions.sort((a, b) => a.topic.localeCompare(b.topic));
@@ -621,6 +648,9 @@ export function ThreeDeeRender(props: {
   const [receivedControlMessage, setreceivedControlMessage] = useState<unknown>();
   const [receivedPlanMessage, setReceivedPlanMessage] = useState<unknown>();
   const [receivedControlCmdMessage, setreceivedControlCmdMessage] = useState<unknown>();
+  const [receivedParkingSlotsMessage, setReceivedParkingSlotsMessage] = useState<unknown>();
+  const [receivedVisGridMapMessage, setReceivedVisGridMapMessage] = useState<unknown>();
+  const [receivedVehicleOdomMessage, setReceivedVehicleOdomMessage] = useState<unknown>();
   // Handle messages and render a frame if new messages are available
   useEffect(() => {
     if (!renderer || !currentFrameMessages) return;
@@ -628,6 +658,9 @@ export function ThreeDeeRender(props: {
     let hasControlMsg = false;
     let hasControlCmdMsg = false;
     let hasPlanMsg = false;
+    let hasParkingSlotsMsg = false;
+    let hasVisGridMapMsg = false;
+    let hasVehicleOdomMsg = false;
 
     currentFrameMessages.forEach((message) => {
       if (message.topic === "/control_debug") {
@@ -637,9 +670,17 @@ export function ThreeDeeRender(props: {
         setreceivedControlCmdMessage(message);
         hasControlCmdMsg = true;
       } else if (message.topic === "/planning_debug") {
-        // 新增处理分支
         setReceivedPlanMessage(message);
         hasPlanMsg = true;
+      } else if (message.topic === "/parking_slots") {
+        setReceivedParkingSlotsMessage(message);
+        hasParkingSlotsMsg = true;
+      } else if (message.topic === "/vis_grid_map") {
+        setReceivedVisGridMapMessage(message);
+        hasVisGridMapMsg = true;
+      } else if (message.topic === "/vehicle_odom") {
+        setReceivedVehicleOdomMessage(message);
+        hasVehicleOdomMsg = true;
       }
       renderer.addMessageEvent(message);
     });
@@ -649,12 +690,16 @@ export function ThreeDeeRender(props: {
     if (!hasControlMsg) missingMessage.push("/control_debug");
     if (!hasControlCmdMsg) missingMessage.push("/control_cmd");
     if (!hasPlanMsg) missingMessage.push("/planning_debug");
+    if (!hasParkingSlotsMsg) missingMessage.push("/parking_slots");
+    if (!hasVisGridMapMsg) missingMessage.push("/vis_grid_map");
+    if (!hasVehicleOdomMsg) missingMessage.push("/vehicle_odom");
     if (missingMessage.length > 0) {
       statusMessage += "缺少消息: " + missingMessage.join(", ");
     } else {
       statusMessage += "消息完整";
     }
     console.log(statusMessage);
+
 
     renderRef.current.needsRender = true;
   }, [currentFrameMessages, renderer]);
@@ -931,7 +976,7 @@ export function ThreeDeeRender(props: {
     } catch (error) {
       console.error("[Publish] Error publishing message:", error);
     }
-    // sleep 2s
+    // sleep 0.15s
     setTimeout(() => {
       const message = {
         data: 2,
@@ -941,7 +986,7 @@ export function ThreeDeeRender(props: {
       } catch (error) {
         console.error("[Publish] Error publishing message:", error);
       }
-    }, 1000);
+    }, 150);
   }, [context]);
 
   const onClickStopButton = useCallback(() => {
@@ -1188,9 +1233,14 @@ export function ThreeDeeRender(props: {
 
           log.info("Published parking slot position");
           setParkingSlotSelectionActive(false);
+          // 等待1s后删除临时车位
+          setTimeout(() => {
+            parkingExtension.removeParkingSlot(tempSlotId);
+          }, 1000);
         } catch (error) {
           log.error("Failed to publish parking slot position:", error);
           setParkingSlotSelectionActive(false);
+          parkingExtension.removeParkingSlot(tempSlotId);
         }
       }
     });
@@ -1343,6 +1393,9 @@ export function ThreeDeeRender(props: {
             receivedControlMessage={receivedControlMessage}
             receivedPlanMessage={receivedPlanMessage}
             receivedControlCmdMessage={receivedControlCmdMessage}
+            receivedParkingSlotsMessage={receivedParkingSlotsMessage}
+            receivedVisGridMapMessage={receivedVisGridMapMessage}
+            receivedVehicleOdomMessage={receivedVehicleOdomMessage}
             parkingSlotSelectionActive={parkingSlotSelectionActive}
           />
         </RendererContext.Provider>

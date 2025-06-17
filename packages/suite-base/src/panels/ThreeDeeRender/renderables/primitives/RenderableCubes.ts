@@ -73,6 +73,10 @@ export class RenderableCubes extends RenderablePrimitive {
     this.#outlineGeometry = new THREE.InstancedBufferGeometry();
     (this.#outlineGeometry as THREE.BufferGeometry).copy(this.#sharedEdgesGeometry);
     this.#outlineGeometry.setAttribute("instanceMatrix", this.#mesh.instanceMatrix);
+
+    renderer.instancedOutlineMaterial.color.r = 0.5;
+    renderer.instancedOutlineMaterial.color.g = 0.5;
+    renderer.instancedOutlineMaterial.color.b = 0.5;
     this.#outline = new THREE.LineSegments(
       this.#outlineGeometry,
       renderer.instancedOutlineMaterial,
