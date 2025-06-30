@@ -48,7 +48,12 @@ import { SELECTED_ID_VARIABLE } from "./Renderable";
 import { Renderer } from "./Renderer";
 import { RendererContext, useRendererEvent, useRendererProperty } from "./RendererContext";
 import { RendererOverlay } from "./RendererOverlay";
-import { CameraState, DEFAULT_CAMERA_STATE, PARKING_MODE_VIEW_3D, PARKING_MODE_VIEW_2D } from "./camera";
+import {
+  CameraState,
+  DEFAULT_CAMERA_STATE,
+  PARKING_MODE_VIEW_3D,
+  PARKING_MODE_VIEW_2D,
+} from "./camera";
 import {
   PublishRos1Datatypes,
   PublishRos2Datatypes,
@@ -71,45 +76,49 @@ import { makePose } from "@lichtblick/suite-base/panels/ThreeDeeRender/transform
 const log = Logger.getLogger(__filename);
 
 const SCHEMA_MAP = {
-  ros1:{
-    "clicked_point": "geometry_msgs/PointStamped",
-    "clicked_pose": "geometry_msgs/PoseStamped",
-    "clicked_pose_estimate": "geometry_msgs/PoseWithCovarianceStamped",
+  ros1: {
+    clicked_point: "geometry_msgs/PointStamped",
+    clicked_pose: "geometry_msgs/PoseStamped",
+    clicked_pose_estimate: "geometry_msgs/PoseWithCovarianceStamped",
     "/control_switch": "std_msgs/Int32",
     "/park_out_type": "std_msgs/String",
     "/parking_head_in": "std_msgs/Int32",
     "/record_trace": "std_msgs/Int32",
     "/selected_parking_slot": "geometry_msgs/PoseStamped",
+    "/ignore_obstacles": "std_msgs/Int32",
   },
-  ros2:{
-    "clicked_point": "geometry_msgs/msg/PointStamped",
-    "clicked_pose": "geometry_msgs/msg/PoseStamped",
-    "clicked_pose_estimate": "geometry_msgs/msg/PoseWithCovarianceStamped",
+  ros2: {
+    clicked_point: "geometry_msgs/msg/PointStamped",
+    clicked_pose: "geometry_msgs/msg/PoseStamped",
+    clicked_pose_estimate: "geometry_msgs/msg/PoseWithCovarianceStamped",
     "/control_switch": "std_msgs/msg/Int32",
     "/park_out_type": "std_msgs/msg/String",
     "/parking_head_in": "std_msgs/msg/Int32",
     "/record_trace": "std_msgs/msg/Int32",
     "/selected_parking_slot": "geometry_msgs/msg/PoseStamped",
+    "/ignore_obstacles": "std_msgs/msg/Int32",
   },
-  protobuf:{
-    "clicked_point": "foxglove.PoseInFrame",
-    "clicked_pose": "foxglove.PoseInFrame",
-    "clicked_pose_estimate": "foxglove.PoseInFrame",
+  protobuf: {
+    clicked_point: "foxglove.PoseInFrame",
+    clicked_pose: "foxglove.PoseInFrame",
+    clicked_pose_estimate: "foxglove.PoseInFrame",
     "/control_switch": "apa.std_msgs.Int32",
     "/park_out_type": "apa.std_msgs.String",
     "/parking_head_in": "apa.std_msgs.Int32",
     "/record_trace": "apa.std_msgs.Int32",
     "/selected_parking_slot": "foxglove.PoseInFrame",
+    "/ignore_obstacles": "apa.std_msgs.Int32",
   },
   default: {
-    "clicked_point": "geometry_msgs/PointStamped",
-    "clicked_pose": "geometry_msgs/PoseStamped",
-    "clicked_pose_estimate": "geometry_msgs/PoseWithCovarianceStamped",
+    clicked_point: "geometry_msgs/PointStamped",
+    clicked_pose: "geometry_msgs/PoseStamped",
+    clicked_pose_estimate: "geometry_msgs/PoseWithCovarianceStamped",
     "/control_switch": "std_msgs/Int32",
     "/park_out_type": "std_msgs/String",
     "/parking_head_in": "std_msgs/Int32",
     "/record_trace": "std_msgs/Int32",
     "/selected_parking_slot": "geometry_msgs/PoseStamped",
+    "/ignore_obstacles": "std_msgs/Int32",
   },
 };
 
@@ -130,7 +139,7 @@ const PANEL_STYLE: React.CSSProperties = {
  * A panel that renders a 3D scene. This is a thin wrapper around a `Renderer` instance.
  */
 export function ThreeDeeRender(props: {
-  context: BuiltinPanelExtensionContext;  // 提供面板与宿主环境的交互能力：状态保存/加载，数据订阅，布局操作，资源加载
+  context: BuiltinPanelExtensionContext; // 提供面板与宿主环境的交互能力：状态保存/加载，数据订阅，布局操作，资源加载
   interfaceMode: InterfaceMode;
   testOptions: TestOptions;
   /** Allow for injection or overriding of default extensions by custom extensions */
@@ -140,13 +149,14 @@ export function ThreeDeeRender(props: {
   const {
     initialState,
     saveState,
-    unstable_fetchAsset: fetchAsset,  // 将 context 中的 unstable_fetchAsset 拿出来并重命名为 fetchAsset
+    unstable_fetchAsset: fetchAsset, // 将 context 中的 unstable_fetchAsset 拿出来并重命名为 fetchAsset
     unstable_setMessagePathDropConfig: setMessagePathDropConfig,
   } = context;
   const analytics = useAnalytics(); // 一个使用 React Context 机制获取预先注入的分析工具
 
   // Load and save the persisted panel configuration
-  const [config, setConfig] = useState<Immutable<RendererConfig>>(() => { // 这里定义了一个设置 config 的 Hook
+  const [config, setConfig] = useState<Immutable<RendererConfig>>(() => {
+    // 这里定义了一个设置 config 的 Hook
     const partialConfig = initialState as DeepPartial<RendererConfig> | undefined;
 
     // Initialize the camera from default settings overlaid with persisted settings
@@ -184,7 +194,7 @@ export function ThreeDeeRender(props: {
   const [renderer, setRenderer] = useState<IRenderer | undefined>(undefined);
   const rendererRef = useRef<IRenderer | undefined>(undefined);
 
-  const { enqueueSnackbar } = useSnackbar();  // snackbar 是一个用来显示 notification 的组件
+  const { enqueueSnackbar } = useSnackbar(); // snackbar 是一个用来显示 notification 的组件
 
   const displayTemporaryError = useCallback(
     (errorString: string) => {
@@ -194,7 +204,7 @@ export function ThreeDeeRender(props: {
   );
 
   useEffect(() => {
-    const newRenderer = canvas  // 副作用逻辑：在组件挂载，或者更新时执行
+    const newRenderer = canvas // 副作用逻辑：在组件挂载，或者更新时执行
       ? new Renderer({
           canvas,
           config: configRef.current,
@@ -211,11 +221,13 @@ export function ThreeDeeRender(props: {
       : undefined;
     setRenderer(newRenderer);
     rendererRef.current = newRenderer;
-    return () => {  // 清理逻辑：在组件卸载，或者下次 effect 执行前执行
+    return () => {
+      // 清理逻辑：在组件卸载，或者下次 effect 执行前执行
       rendererRef.current?.dispose();
       rendererRef.current = undefined;
     };
-  }, [  // 依赖数组，依赖数组中的变量发生变化时，useEffect 会重新执行
+  }, [
+    // 依赖数组，依赖数组中的变量发生变化时，useEffect 会重新执行
     canvas,
     configRef,
     config.scene.transforms?.enablePreloading,
@@ -644,6 +656,7 @@ export function ThreeDeeRender(props: {
     }
   }, [renderer, currentTime, allFrames]);
 
+  const [showIgnoreObstaclesButton, setShowIgnoreObstaclesButton] = useState(false);
   // 添加消息接收状态
   const [receivedControlMessage, setreceivedControlMessage] = useState<unknown>();
   const [receivedPlanMessage, setReceivedPlanMessage] = useState<unknown>();
@@ -672,6 +685,10 @@ export function ThreeDeeRender(props: {
       } else if (message.topic === "/planning_debug") {
         setReceivedPlanMessage(message);
         hasPlanMsg = true;
+        const needIgnore = (message.message as { need_ignore_obstacles?: boolean })
+          ?.need_ignore_obstacles;
+        setShowIgnoreObstaclesButton(needIgnore === true);
+        // setShowIgnoreObstaclesButton(true);
       } else if (message.topic === "/parking_slots") {
         setReceivedParkingSlotsMessage(message);
         hasParkingSlotsMsg = true;
@@ -699,7 +716,6 @@ export function ThreeDeeRender(props: {
       statusMessage += "消息完整";
     }
     console.log(statusMessage);
-
 
     renderRef.current.needsRender = true;
   }, [currentFrameMessages, renderer]);
@@ -811,22 +827,54 @@ export function ThreeDeeRender(props: {
   const topicManager = useMemo(() => TopicAdvertisementManager.getInstance(), []);
   useEffect(() => {
     const datatypes =
-      context.dataSourceProfile === "ros2" ? PublishRos2Datatypes :
-      context.dataSourceProfile === "ros1" ? PublishRos1Datatypes :
-      context.dataSourceProfile === "protobuf" ? PublishProtoDatatypes :
-      undefined;
+      context.dataSourceProfile === "ros2"
+        ? PublishRos2Datatypes
+        : context.dataSourceProfile === "ros1"
+          ? PublishRos1Datatypes
+          : context.dataSourceProfile === "protobuf"
+            ? PublishProtoDatatypes
+            : undefined;
 
-    const schemaKey = (context.dataSourceProfile === "ros1" || context.dataSourceProfile === "ros2" || context.dataSourceProfile === "protobuf")
-      ? context.dataSourceProfile
-      : "default";
+    const schemaKey =
+      context.dataSourceProfile === "ros1" ||
+      context.dataSourceProfile === "ros2" ||
+      context.dataSourceProfile === "protobuf"
+        ? context.dataSourceProfile
+        : "default";
 
-    topicManager.advertise(context, publishTopics.goal, SCHEMA_MAP[schemaKey]["/selected_parking_slot"], { datatypes });
-    topicManager.advertise(context, publishTopics.point, SCHEMA_MAP[schemaKey]["clicked_point"], { datatypes });
-    topicManager.advertise(context, publishTopics.pose, SCHEMA_MAP[schemaKey]["clicked_pose_estimate"], { datatypes });
-    topicManager.advertise(context, "/control_switch", SCHEMA_MAP[schemaKey]["/control_switch"], { datatypes });
-    topicManager.advertise(context, "/park_out_type", SCHEMA_MAP[schemaKey]["/park_out_type"], { datatypes });
-    topicManager.advertise(context, "/parking_head_in", SCHEMA_MAP[schemaKey]["/parking_head_in"], { datatypes });
-    topicManager.advertise(context, "/record_trace", SCHEMA_MAP[schemaKey]["/record_trace"], { datatypes });
+    topicManager.advertise(
+      context,
+      publishTopics.goal,
+      SCHEMA_MAP[schemaKey]["/selected_parking_slot"],
+      { datatypes },
+    );
+    topicManager.advertise(context, publishTopics.point, SCHEMA_MAP[schemaKey]["clicked_point"], {
+      datatypes,
+    });
+    topicManager.advertise(
+      context,
+      publishTopics.pose,
+      SCHEMA_MAP[schemaKey]["clicked_pose_estimate"],
+      { datatypes },
+    );
+    topicManager.advertise(context, "/control_switch", SCHEMA_MAP[schemaKey]["/control_switch"], {
+      datatypes,
+    });
+    topicManager.advertise(context, "/park_out_type", SCHEMA_MAP[schemaKey]["/park_out_type"], {
+      datatypes,
+    });
+    topicManager.advertise(context, "/parking_head_in", SCHEMA_MAP[schemaKey]["/parking_head_in"], {
+      datatypes,
+    });
+    topicManager.advertise(context, "/record_trace", SCHEMA_MAP[schemaKey]["/record_trace"], {
+      datatypes,
+    });
+    topicManager.advertise(
+      context,
+      "/ignore_obstacles",
+      SCHEMA_MAP[schemaKey]["/ignore_obstacles"],
+      { datatypes },
+    );
     return () => {
       topicManager.unadvertise(context, publishTopics.goal);
       topicManager.unadvertise(context, publishTopics.point);
@@ -835,6 +883,7 @@ export function ThreeDeeRender(props: {
       topicManager.unadvertise(context, "/park_out_type");
       topicManager.unadvertise(context, "/parking_head_in");
       topicManager.unadvertise(context, "/record_trace");
+      topicManager.unadvertise(context, "/ignore_obstacles");
     };
   }, [publishTopics, context, context.dataSourceProfile]);
 
@@ -859,9 +908,11 @@ export function ThreeDeeRender(props: {
         log.error("Data source does not support publishing");
         return;
       }
-      if (context.dataSourceProfile !== "ros1" &&
-          context.dataSourceProfile !== "ros2" &&
-          context.dataSourceProfile !== "protobuf") {
+      if (
+        context.dataSourceProfile !== "ros1" &&
+        context.dataSourceProfile !== "ros2" &&
+        context.dataSourceProfile !== "protobuf"
+      ) {
         log.warn("Publishing is only supported in ros1 and ros2");
         return;
       }
@@ -869,7 +920,7 @@ export function ThreeDeeRender(props: {
       try {
         switch (event.publishClickType) {
           case "point": {
-            if (context.dataSourceProfile === "protobuf"){
+            if (context.dataSourceProfile === "protobuf") {
               let point = pointTransform(event.point, renderFrameId, publishFrameId, renderer);
               // convert point to pose
               const pose = {
@@ -897,15 +948,15 @@ export function ThreeDeeRender(props: {
           case "pose": {
             let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
             const message =
-              context.dataSourceProfile === "protobuf"?
-                makeFoxglovePoseMessage(pose, publishFrameId) :
-                makePoseMessage(pose, publishFrameId);
+              context.dataSourceProfile === "protobuf"
+                ? makeFoxglovePoseMessage(pose, publishFrameId)
+                : makePoseMessage(pose, publishFrameId);
             console.debug("[Publish] pose message:", message);
             context.publish(publishTopics.goal, message);
             break;
           }
           case "pose_estimate": {
-            if (context.dataSourceProfile === "protobuf"){
+            if (context.dataSourceProfile === "protobuf") {
               let pose = poseTransform(event.pose, renderFrameId, publishFrameId, renderer);
               const message = makeFoxglovePoseMessage(pose, publishFrameId);
               context.publish(publishTopics.pose, message);
@@ -960,9 +1011,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -971,7 +1024,7 @@ export function ThreeDeeRender(props: {
     const message = {
       data: 0,
     };
-    try{
+    try {
       context.publish("/control_switch", message);
     } catch (error) {
       console.error("[Publish] Error publishing message:", error);
@@ -981,7 +1034,7 @@ export function ThreeDeeRender(props: {
       const message = {
         data: 2,
       };
-      try{
+      try {
         context.publish!("/control_switch", message);
       } catch (error) {
         console.error("[Publish] Error publishing message:", error);
@@ -994,9 +1047,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1012,7 +1067,7 @@ export function ThreeDeeRender(props: {
       const message = {
         data: 4,
       };
-      try{
+      try {
         context.publish!("/control_switch", message);
       } catch (error) {
         console.error("[Publish] Error publishing message:", error);
@@ -1025,9 +1080,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1042,9 +1099,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1059,9 +1118,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1076,9 +1137,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1093,9 +1156,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1110,9 +1175,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1127,9 +1194,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1144,9 +1213,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1163,9 +1234,11 @@ export function ThreeDeeRender(props: {
       log.error("Data source does not support publishing");
       return;
     }
-    if (context.dataSourceProfile !== "ros1" &&
-        context.dataSourceProfile !== "ros2" &&
-        context.dataSourceProfile !== "protobuf") {
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
       log.warn("Publishing is only supported in ros1, ros2 and protobuf");
       return;
     }
@@ -1175,8 +1248,9 @@ export function ThreeDeeRender(props: {
     const tempSlotId = `parking-slot-temp-${Date.now()}`;
 
     // Create a temporary parking slot
-    const parkingExtension = Array.from(renderer?.sceneExtensions.values() || [])
-      .find(ext => ext.extensionId === "foxglove.ParkingSlots") as ParkingSlots | undefined;
+    const parkingExtension = Array.from(renderer?.sceneExtensions.values() || []).find(
+      (ext) => ext.extensionId === "foxglove.ParkingSlots",
+    ) as ParkingSlots | undefined;
 
     if (!parkingExtension) {
       log.error("ParkingSlots extension not found");
@@ -1218,9 +1292,9 @@ export function ThreeDeeRender(props: {
           pose.orientation = orientation;
 
           const message =
-            context.dataSourceProfile === "protobuf"?
-              makeFoxglovePoseMessage(pose, publishFrameId) :
-              makePoseMessage(pose, publishFrameId);
+            context.dataSourceProfile === "protobuf"
+              ? makeFoxglovePoseMessage(pose, publishFrameId)
+              : makePoseMessage(pose, publishFrameId);
 
           console.debug("[ParkingSlot] Publishing parking slot position:", message);
           // Publish to a new topic specifically for parking slots
@@ -1242,7 +1316,7 @@ export function ThreeDeeRender(props: {
           setParkingSlotSelectionActive(false);
           parkingExtension.removeParkingSlot(tempSlotId);
         }
-      }
+      },
     });
   }, [context, renderer]);
 
@@ -1263,9 +1337,8 @@ export function ThreeDeeRender(props: {
     if (newLockState) {
       // Lock mode: Set camera to parking view and follow the current render frame
       const currentState = renderer.getCameraState();
-      const parkingModeView = currentState?.perspective === true
-        ? PARKING_MODE_VIEW_3D
-        : PARKING_MODE_VIEW_2D;
+      const parkingModeView =
+        currentState?.perspective === true ? PARKING_MODE_VIEW_3D : PARKING_MODE_VIEW_2D;
 
       // Set camera state first
       renderer.setCameraState(parkingModeView);
@@ -1284,7 +1357,7 @@ export function ThreeDeeRender(props: {
       setConfig((prevConfig) => ({
         ...prevConfig,
         followMode: "follow-none", // Don't follow any frame
-        renderTf: undefined // Clear the follow frame
+        renderTf: undefined, // Clear the follow frame
       }));
     }
 
@@ -1300,9 +1373,8 @@ export function ThreeDeeRender(props: {
     const handleCameraMove = () => {
       // Get the current camera state
       const currentState = renderer.getCameraState();
-      const parkingModeView = currentState?.perspective === true
-        ? PARKING_MODE_VIEW_3D
-        : PARKING_MODE_VIEW_2D;
+      const parkingModeView =
+        currentState?.perspective === true ? PARKING_MODE_VIEW_3D : PARKING_MODE_VIEW_2D;
       if (!_.isEqual(currentState, parkingModeView)) {
         // Reset to parking view
         renderer.setCameraState(parkingModeView);
@@ -1341,7 +1413,9 @@ export function ThreeDeeRender(props: {
 
   // The 3d panel only supports publishing to ros1 and ros2 data sources
   const isRosDataSource =
-    context.dataSourceProfile === "ros1" || context.dataSourceProfile === "ros2" || context.dataSourceProfile === "protobuf";
+    context.dataSourceProfile === "ros1" ||
+    context.dataSourceProfile === "ros2" ||
+    context.dataSourceProfile === "protobuf";
   const canPublish = context.publish != undefined && isRosDataSource;
 
   return (
@@ -1397,6 +1471,13 @@ export function ThreeDeeRender(props: {
             receivedVisGridMapMessage={receivedVisGridMapMessage}
             receivedVehicleOdomMessage={receivedVehicleOdomMessage}
             parkingSlotSelectionActive={parkingSlotSelectionActive}
+            showIgnoreObstaclesButton={showIgnoreObstaclesButton}
+            onIgnoreObstaclesClick={() => {
+              if (context.publish) {
+                context.publish("/ignore_obstacles", { data: 1 });
+                // setShowIgnoreObstaclesButton(false);
+              }
+            }}
           />
         </RendererContext.Provider>
       </div>

@@ -63,4 +63,7 @@ message PlanningDebug {
   // 换挡次数
   optional int32 total_gear_stroke = 25;
   optional int32 current_gear_stroke = 26;
+
+  optional bool need_ignore_obstacles = 27;
+
 }

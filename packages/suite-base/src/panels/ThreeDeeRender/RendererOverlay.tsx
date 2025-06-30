@@ -16,7 +16,7 @@ import {
   Tooltip,
   useTheme,
   Slider,
-  Box
+  Box,
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import React from "react";
@@ -119,18 +119,24 @@ const useStyles = makeStyles()((theme) => ({
  * @example
  * StatusIndicator({ status: true, size: 8 })
  */
-function StatusIndicator({ status, size=8,} : { status: boolean; size?: number; }) : React.JSX.Element {
+function StatusIndicator({
+  status,
+  size = 8,
+}: {
+  status: boolean;
+  size?: number;
+}): React.JSX.Element {
   return (
     <Box
       component="span"
       sx={{
-        display: 'inline-block',
+        display: "inline-block",
         width: size,
         height: size,
-        borderRadius: '50%',
-        backgroundColor: status ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)',
+        borderRadius: "50%",
+        backgroundColor: status ? "rgba(0, 255, 0, 0.8)" : "rgba(255, 0, 0, 0.8)",
         marginRight: 1,
-        verticalAlign: 'middle'
+        verticalAlign: "middle",
       }}
     />
   );
@@ -157,9 +163,9 @@ function CustomSlider({
   value: number;
   min: number;
   max: number;
-  step?:number;
+  step?: number;
   color?: string;
- }) : React.JSX.Element {
+}): React.JSX.Element {
   const baseColor = tc(color);
   return (
     <Slider
@@ -173,19 +179,19 @@ function CustomSlider({
       disabled
       sx={{
         width: 80,
-        display: 'inline-block',
-        verticalAlign: 'middle',
+        display: "inline-block",
+        verticalAlign: "middle",
         ml: 1,
-        '& .MuiSlider-thumb': {
-          transition: 'none',
+        "& .MuiSlider-thumb": {
+          transition: "none",
           width: 10,
           height: 10,
           backgroundColor: baseColor.toString(),
         },
-        '& .MuiSlider-rail': {
+        "& .MuiSlider-rail": {
           backgroundColor: baseColor.darken(15).setAlpha(0.8).toString(),
         },
-        '& .MuiSlider-track': {
+        "& .MuiSlider-track": {
           backgroundColor: baseColor.lighten(15).setAlpha(0.8).toString(),
         },
       }}
@@ -229,6 +235,9 @@ type Props = {
   receivedVisGridMapMessage?: unknown;
   receivedVehicleOdomMessage?: unknown;
   parkingSlotSelectionActive?: boolean;
+
+  showIgnoreObstaclesButton?: boolean;
+  onIgnoreObstaclesClick?: () => void;
 };
 
 /**
@@ -243,7 +252,6 @@ export function RendererOverlay(props: Props): React.JSX.Element {
   // const visGridMapFrequency = frequencies['/vis_grid_map'] || 0;
   // const vehicleOdomFrequency = frequencies['/vehilce_odom'] || 0;
   // const planningDebugFrequency = frequencies['/planning_debug'] || 0;
-
 
   const [clickedPosition, setClickedPosition] = useState<{ clientX: number; clientY: number }>({
     clientX: 0,
@@ -410,29 +418,35 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     try {
       const msg = (props.receivedPlanMessage as any)?.message ?? props.receivedPlanMessage;
       return (
-        <div style={{ position: 'relative', marginBottom: 6 }}>
+        <div style={{ position: "relative", marginBottom: 6 }}>
           {/* 标题和分隔线 */}
-          <div style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '1.0em',
-            marginBottom: 4,
-            fontWeight: 'bold',
-            fontFamily: 'monospace'
-          }}>
+          <div
+            style={{
+              color: "rgba(255, 255, 255, 0.8)",
+              fontSize: "1.0em",
+              marginBottom: 4,
+              fontWeight: "bold",
+              fontFamily: "monospace",
+            }}
+          >
             规划信息
           </div>
-          <div style={{
-            borderBottom: '1px solid rgba(255,255,255,0.3)',
-            marginBottom: 4
-          }}/>
+          <div
+            style={{
+              borderBottom: "1px solid rgba(255,255,255,0.3)",
+              marginBottom: 4,
+            }}
+          />
 
-          {`planning_status:  `}<StatusIndicator status={msg.planning_status === 0} />{`${msg.planning_status_str}\n`}
+          {`planning_status:  `}
+          <StatusIndicator status={msg.planning_status === 0} />
+          {`${msg.planning_status_str}\n`}
           {`hybrid A* status: ${msg.hybrid_astar_status_str}\n`}
           {`replan_reason:    ${msg.replan_reason_str_history}\n`}
           {`length buffer:    ${msg.planning_inflation_length}\n`}
           {`width buffer:     ${msg.planning_inflation_width}\n`}
           {`gear change:      ${msg.current_gear_stroke} of ${msg.total_gear_stroke} \n`}
-          {`hybrid A* time:   ${safeNumberFormat(msg.hybrid_a_star_search_time,3)}\n`}
+          {`hybrid A* time:   ${safeNumberFormat(msg.hybrid_a_star_search_time, 3)}\n`}
           {`Totoal time:      ${safeNumberFormat(msg.computation_time, 2)} s\n`}
           {`Debug msg time:   ${msg.header?.timestamp_sec ?? "--"} \n`}
         </div>
@@ -442,70 +456,77 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     }
   }, [props.receivedPlanMessage]);
 
-// 解析 /vis_grid_map 的 timestamp 信息
-const visGridMapTimestampContent = useMemo(() => {
-  if (!props.receivedVisGridMapMessage) {
-    return null;
-  }
-  try {
-    const msg = (props.receivedVisGridMapMessage as any)?.message ?? props.receivedVisGridMapMessage;
-    const sec = msg.timestamp?.sec ?? "--";
-    const nsec = msg.timestamp?.nsec ?? "--";
-    return  (
-        <div style={{ position: 'relative', marginBottom: 6 }}>
+  // 解析 /vis_grid_map 的 timestamp 信息
+  const visGridMapTimestampContent = useMemo(() => {
+    if (!props.receivedVisGridMapMessage) {
+      return null;
+    }
+    try {
+      const msg =
+        (props.receivedVisGridMapMessage as any)?.message ?? props.receivedVisGridMapMessage;
+      const sec = msg.timestamp?.sec ?? "--";
+      const nsec = msg.timestamp?.nsec ?? "--";
+      return (
+        <div style={{ position: "relative", marginBottom: 6 }}>
           {/* 标题和分隔线 */}
-          <div style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '1.0em',
-            marginBottom: 4,
-            fontWeight: 'bold',
-            fontFamily: 'monospace'
-          }}>
+          <div
+            style={{
+              color: "rgba(255, 255, 255, 0.8)",
+              fontSize: "1.0em",
+              marginBottom: 4,
+              fontWeight: "bold",
+              fontFamily: "monospace",
+            }}
+          >
             感知定位信息
           </div>
-          <div style={{
-            borderBottom: '1px solid rgba(255,255,255,0.3)',
-            marginBottom: 4
-          }}/>
+          <div
+            style={{
+              borderBottom: "1px solid rgba(255,255,255,0.3)",
+              marginBottom: 4,
+            }}
+          />
           {`vis_grid_map:     ${sec}.${nsec} s\n`}
         </div>
       );
-  } catch (error) {
-    console.error("消息解析错误:", error);
-    return "vis_grid_map 等待时间戳...";
-  }
-}, [props.receivedVisGridMapMessage]);
+    } catch (error) {
+      console.error("消息解析错误:", error);
+      return "vis_grid_map 等待时间戳...";
+    }
+  }, [props.receivedVisGridMapMessage]);
 
-// 解析 /parking_slots 的 timestamp 信息
-const parkingSlotsTimestampContent = useMemo(() => {
-  if (!props.receivedParkingSlotsMessage) {
-    return null;
-  }
-  try {
-    const msg = (props.receivedParkingSlotsMessage as any)?.message ?? props.receivedParkingSlotsMessage;
-    const timestampSec = msg.header?.timestamp_sec ?? "--";
-    return `parking_slots:    ${timestampSec} s\n`;
-  } catch (error) {
-    console.error("消息解析错误:", error);
-    return "parking_slots 等待时间戳...";
-  }
-}, [props.receivedParkingSlotsMessage]);
+  // 解析 /parking_slots 的 timestamp 信息
+  const parkingSlotsTimestampContent = useMemo(() => {
+    if (!props.receivedParkingSlotsMessage) {
+      return null;
+    }
+    try {
+      const msg =
+        (props.receivedParkingSlotsMessage as any)?.message ?? props.receivedParkingSlotsMessage;
+      const timestampSec = msg.header?.timestamp_sec ?? "--";
+      return `parking_slots:    ${timestampSec} s\n`;
+    } catch (error) {
+      console.error("消息解析错误:", error);
+      return "parking_slots 等待时间戳...";
+    }
+  }, [props.receivedParkingSlotsMessage]);
 
-// 解析 /vehicle_odom 的 timestamp 信息
-const vehicleOdomTimestampContent = useMemo(() => {
-  if (!props.receivedVehicleOdomMessage) {
-    return null;
-  }
-  try {
-    const msg = (props.receivedVehicleOdomMessage as any)?.message ?? props.receivedVehicleOdomMessage;
-    const sec = msg.timestamp?.sec ?? "--";
-    const nsec = msg.timestamp?.nsec ?? "--";
-    return `vehicle_odom:     ${sec}.${nsec} s\n`;
-  } catch (error) {
-    console.error("消息解析错误:", error);
-    return "vehicle_odom 等待时间戳...";
-  }
-}, [props.receivedVehicleOdomMessage]);
+  // 解析 /vehicle_odom 的 timestamp 信息
+  const vehicleOdomTimestampContent = useMemo(() => {
+    if (!props.receivedVehicleOdomMessage) {
+      return null;
+    }
+    try {
+      const msg =
+        (props.receivedVehicleOdomMessage as any)?.message ?? props.receivedVehicleOdomMessage;
+      const sec = msg.timestamp?.sec ?? "--";
+      const nsec = msg.timestamp?.nsec ?? "--";
+      return `vehicle_odom:     ${sec}.${nsec} s\n`;
+    } catch (error) {
+      console.error("消息解析错误:", error);
+      return "vehicle_odom 等待时间戳...";
+    }
+  }, [props.receivedVehicleOdomMessage]);
 
   const controlMessageContent = useMemo(() => {
     if (!props.receivedControlMessage) {
@@ -514,24 +535,34 @@ const vehicleOdomTimestampContent = useMemo(() => {
     try {
       const msg = (props.receivedControlMessage as any)?.message ?? props.receivedControlMessage;
       return (
-        <div style={{ position: 'relative', marginBottom: 6 }}>
+        <div style={{ position: "relative", marginBottom: 6 }}>
           {/* 标题和分隔线 */}
-          <div style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '1.0em',
-            marginBottom: 4,
-            fontWeight: 'bold',
-            fontFamily: 'monospace'
-          }}>
+          <div
+            style={{
+              color: "rgba(255, 255, 255, 0.8)",
+              fontSize: "1.0em",
+              marginBottom: 4,
+              fontWeight: "bold",
+              fontFamily: "monospace",
+            }}
+          >
             控制信息
           </div>
-          <div style={{
-            borderBottom: '1px solid rgba(255,255,255,0.3)',
-            marginBottom: 4
-          }}/>
-          {`control active:   `}<StatusIndicator status={Number(msg.control_active) === 1} />{`${Number(msg.control_active) === 1 ? "True" : "False"}\n`}
-          {`xbw lat status:   `}<StatusIndicator status={Number(msg.xbw_lat_status) <= 2} />{`${safeNumberFormat(msg.xbw_lat_status, 0)}\n`}
-          {`xbw lon status:   `}<StatusIndicator status={Number(msg.xbw_lon_status) <= 2} />{`${safeNumberFormat(msg.xbw_lon_status, 0)}\n`}
+          <div
+            style={{
+              borderBottom: "1px solid rgba(255,255,255,0.3)",
+              marginBottom: 4,
+            }}
+          />
+          {`control active:   `}
+          <StatusIndicator status={Number(msg.control_active) === 1} />
+          {`${Number(msg.control_active) === 1 ? "True" : "False"}\n`}
+          {`xbw lat status:   `}
+          <StatusIndicator status={Number(msg.xbw_lat_status) <= 2} />
+          {`${safeNumberFormat(msg.xbw_lat_status, 0)}\n`}
+          {`xbw lon status:   `}
+          <StatusIndicator status={Number(msg.xbw_lon_status) <= 2} />
+          {`${safeNumberFormat(msg.xbw_lon_status, 0)}\n`}
           {`control status:   ${msg.control_status}\n`}
           {`lat_err:          ${safeNumberFormat(msg.lat_err, 3)} m\n`}
           {`yaw_err:          ${safeNumberFormat(msg.yaw_err, 3)} deg\n`}
@@ -539,7 +570,15 @@ const vehicleOdomTimestampContent = useMemo(() => {
           {`gear:             ${gearMapping(msg.current_gear)}\n`}
           {`target_kappa:     ${safeNumberFormat(msg.target_kappa, 3)}\n`}
           {`current kappa:    ${safeNumberFormat(msg.current_steer_kappa, 3)}\n`}
-          {"steer:            "}<CustomSlider value={msg.current_steer_kappa} min={-0.3} max={0.3} step={0.01} color="rgba(163, 142, 255, 0.8)" /> {"\n"}
+          {"steer:            "}
+          <CustomSlider
+            value={msg.current_steer_kappa}
+            min={-0.3}
+            max={0.3}
+            step={0.01}
+            color="rgba(163, 142, 255, 0.8)"
+          />{" "}
+          {"\n"}
         </div>
       );
     } catch (error) {
@@ -553,11 +592,19 @@ const vehicleOdomTimestampContent = useMemo(() => {
       return null;
     }
     try {
-      const msg = (props.receivedControlCmdMessage as any)?.message ?? props.receivedControlCmdMessage;
+      const msg =
+        (props.receivedControlCmdMessage as any)?.message ?? props.receivedControlCmdMessage;
       return (
         <div>
           {`acceleration:     ${safeNumberFormat(msg.acceleration, 2)} m/s^2\n`}
-          {`acceleration:     `}<CustomSlider value={msg.acceleration} min={-3.0} max={3.0} color="rgba(163, 142, 255, 0.8)" />{"\n"}
+          {`acceleration:     `}
+          <CustomSlider
+            value={msg.acceleration}
+            min={-3.0}
+            max={3.0}
+            color="rgba(163, 142, 255, 0.8)"
+          />
+          {"\n"}
         </div>
       );
     } catch (error) {
@@ -701,21 +748,23 @@ const vehicleOdomTimestampContent = useMemo(() => {
               <div
                 style={{
                   textAlign: "left",
-                  whiteSpace: "pre"
+                  whiteSpace: "pre",
                 }}
               >
                 {/* {`/parking_slots 帧率: ${parkingSlotsFrequency.toFixed(2)} Hz\n`}
                 {`/vis_grid_map 帧率: ${visGridMapFrequency.toFixed(2)} Hz\n`}
                 {`/vehilce_odom 帧率: ${vehicleOdomFrequency.toFixed(2)} Hz\n`}
                 {`/planning_debug 帧率: ${planningDebugFrequency.toFixed(2)} Hz\n`} */}
-                {[controlMessageContent,
+                {[
+                  controlMessageContent,
                   controlCmdMessageContent,
                   planMessageContent,
                   visGridMapTimestampContent,
                   parkingSlotsTimestampContent,
-                  vehicleOdomTimestampContent].filter(Boolean).map((content, index) => (
-                  <div key={index}>{content}</div>
-                )) || "等待信号..."}
+                  vehicleOdomTimestampContent,
+                ]
+                  .filter(Boolean)
+                  .map((content, index) => <div key={index}>{content}</div>) || "等待信号..."}
               </div>
             </div>
           </div>
@@ -965,7 +1014,9 @@ const vehicleOdomTimestampContent = useMemo(() => {
                   borderColor: (theme) =>
                     props.parkingSlotSelectionActive
                       ? theme.palette.success.main
-                      : theme.palette.mode === "dark" ? "rgba(255,255,255,0.23)" : "rgba(0,0,0,0.23)",
+                      : theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.23)"
+                        : "rgba(0,0,0,0.23)",
                   boxShadow: (theme) => theme.shadows[1],
                   backgroundColor: (theme) =>
                     props.parkingSlotSelectionActive
@@ -987,7 +1038,7 @@ const vehicleOdomTimestampContent = useMemo(() => {
                   },
                 }}
               >
-                {t(props.parkingSlotSelectionActive ? "定位中" as any : "自定义车位" as any)}
+                {t(props.parkingSlotSelectionActive ? ("定位中" as any) : ("自定义车位" as any))}
               </Button>
             </div>
           )}
@@ -1111,6 +1162,16 @@ const vehicleOdomTimestampContent = useMemo(() => {
           </Button>
         </div>
       )}
+      {props.showIgnoreObstaclesButton && (
+        <Button
+          variant="contained"
+          color="warning"
+          style={{ position: "absolute", top: 10, left: 10 }}
+          onClick={props.onIgnoreObstaclesClick}
+        >
+          忽略障碍物
+        </Button>
+      )}
       {props.interfaceMode === "image" && <PanelContextMenu getItems={getContextMenuItems} />}
       <div ref={mousePresenceRef} className={classes.root}>
         {
@@ -1174,7 +1235,7 @@ const vehicleOdomTimestampContent = useMemo(() => {
               <IconButton
                 className={classes.iconButton}
                 size="small"
-                color={props.cameraLocked? "info" : "inherit"}
+                color={props.cameraLocked ? "info" : "inherit"}
                 onClick={props.onClickParkingModeView}
               >
                 <LockReset fontSize="small" />
