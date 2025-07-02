@@ -590,10 +590,10 @@ export function RendererOverlay(props: Props): React.JSX.Element {
           {`current kappa:    ${safeNumberFormat(msg.current_steer_kappa, 3)}\n`}
           {"steer:            "}
           <CustomSlider
-            value={msg.current_steer_kappa}
-            min={-0.3}
-            max={0.3}
-            step={0.01}
+            value={-msg.current_steer_kappa}
+            min={-0.2}
+            max={0.2}
+            step={0.02}
             color="rgba(163, 142, 255, 0.8)"
           />{" "}
           {"\n"}

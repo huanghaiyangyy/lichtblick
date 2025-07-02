@@ -86,6 +86,7 @@ const SCHEMA_MAP = {
     "/record_trace": "std_msgs/Int32",
     "/selected_parking_slot": "geometry_msgs/PoseStamped",
     "/ignore_obstacles": "std_msgs/Int32",
+    "/manual_control": "std_msgs/String",
   },
   ros2: {
     clicked_point: "geometry_msgs/msg/PointStamped",
@@ -97,6 +98,7 @@ const SCHEMA_MAP = {
     "/record_trace": "std_msgs/msg/Int32",
     "/selected_parking_slot": "geometry_msgs/msg/PoseStamped",
     "/ignore_obstacles": "std_msgs/msg/Int32",
+    "/manual_control": "std_msgs/msg/String",
   },
   protobuf: {
     clicked_point: "foxglove.PoseInFrame",
@@ -108,6 +110,7 @@ const SCHEMA_MAP = {
     "/record_trace": "apa.std_msgs.Int32",
     "/selected_parking_slot": "foxglove.PoseInFrame",
     "/ignore_obstacles": "apa.std_msgs.Int32",
+    "/manual_control": "apa.std_msgs.String",
   },
   default: {
     clicked_point: "geometry_msgs/PointStamped",
@@ -119,6 +122,7 @@ const SCHEMA_MAP = {
     "/record_trace": "std_msgs/Int32",
     "/selected_parking_slot": "geometry_msgs/PoseStamped",
     "/ignore_obstacles": "std_msgs/Int32",
+    "/manual_control": "std_msgs/String",
   },
 };
 
@@ -862,6 +866,9 @@ export function ThreeDeeRender(props: {
     topicManager.advertise(context, "/park_out_type", SCHEMA_MAP[schemaKey]["/park_out_type"], {
       datatypes,
     });
+    topicManager.advertise(context, "/manual_control", SCHEMA_MAP[schemaKey]["/manual_control"], {
+      datatypes,
+    });
     topicManager.advertise(context, "/parking_head_in", SCHEMA_MAP[schemaKey]["/parking_head_in"], {
       datatypes,
     });
@@ -880,6 +887,7 @@ export function ThreeDeeRender(props: {
       topicManager.unadvertise(context, publishTopics.pose);
       topicManager.unadvertise(context, "/control_switch");
       topicManager.unadvertise(context, "/park_out_type");
+      topicManager.unadvertise(context, "/manual_control");
       topicManager.unadvertise(context, "/parking_head_in");
       topicManager.unadvertise(context, "/record_trace");
       topicManager.unadvertise(context, "/ignore_obstacles");
@@ -1419,14 +1427,217 @@ export function ThreeDeeRender(props: {
   }, [actionHandler, renderer]);
 
   const onKeyDown = useCallback(
+    // (event: React.KeyboardEvent) => {
+    //   if (event.key === "3" && !(event.metaKey || event.ctrlKey)) {
+    //     onTogglePerspective();
+    //     event.stopPropagation();
+    //     event.preventDefault();
+    //   }
+    // },
+    // [onTogglePerspective],
     (event: React.KeyboardEvent) => {
-      if (event.key === "3" && !(event.metaKey || event.ctrlKey)) {
-        onTogglePerspective();
+        if(event.key === "ArrowUp") {
+          event.stopPropagation();
+          event.preventDefault();
+          if (!context.publish) {
+            log.error("Data source does not support publishing");
+            return;
+          }
+          if (
+            context.dataSourceProfile !== "ros1" &&
+            context.dataSourceProfile !== "ros2" &&
+            context.dataSourceProfile !== "protobuf"
+          ) {
+            log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+            return;
+          }
+          const message = {
+            data: "Accelerate",
+          };
+          context.publish("/manual_control", message);
+      }
+      if(event.key === "ArrowDown") {
         event.stopPropagation();
         event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "Decelerate",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === "ArrowLeft") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "TurnLeft",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === "ArrowRight") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "TurnRight",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === "ArrowRight") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "TurnRight",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === "D" || event.key === "d") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "GearD",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === "R" || event.key === "r") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "GearR",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === "A" || event.key === "a") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "AutoMode",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === "M" || event.key === "m") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "ManualMode",
+        };
+        context.publish("/manual_control", message);
+      }
+      if(event.key === " ") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile!== "ros1" &&
+          context.dataSourceProfile!== "ros2" &&
+          context.dataSourceProfile!== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "TurnCenter",
+        };
+        context.publish("/manual_control", message);
       }
     },
-    [onTogglePerspective],
+    [context],
   );
 
   // The 3d panel only supports publishing to ros1 and ros2 data sources
