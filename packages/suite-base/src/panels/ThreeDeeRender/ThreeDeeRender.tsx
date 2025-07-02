@@ -688,7 +688,6 @@ export function ThreeDeeRender(props: {
         const needIgnore = (message.message as { need_ignore_obstacles?: boolean })
           ?.need_ignore_obstacles;
         setShowIgnoreObstaclesButton(needIgnore === true);
-        // setShowIgnoreObstaclesButton(true);
       } else if (message.topic === "/parking_slots") {
         setReceivedParkingSlotsMessage(message);
         hasParkingSlotsMsg = true;
@@ -1227,6 +1226,25 @@ export function ThreeDeeRender(props: {
     context.publish("/record_trace", message);
   }, [context]);
 
+  const onIgnoreObstaclesClick = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    if (
+      context.dataSourceProfile !== "ros1" &&
+      context.dataSourceProfile !== "ros2" &&
+      context.dataSourceProfile !== "protobuf"
+    ) {
+      log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+      return;
+    }
+    const message = {
+      data: "1",
+    };
+    context.publish("/ignore_obstacles", message);
+  }, [context]);
+
   const [parkingSlotSelectionActive, setParkingSlotSelectionActive] = useState(false);
 
   const onClickSelectParkingSlot = useCallback(() => {
@@ -1472,12 +1490,7 @@ export function ThreeDeeRender(props: {
             receivedVehicleOdomMessage={receivedVehicleOdomMessage}
             parkingSlotSelectionActive={parkingSlotSelectionActive}
             showIgnoreObstaclesButton={showIgnoreObstaclesButton}
-            onIgnoreObstaclesClick={() => {
-              if (context.publish) {
-                context.publish("/ignore_obstacles", { data: 1 });
-                // setShowIgnoreObstaclesButton(false);
-              }
-            }}
+            onIgnoreObstaclesClick={onIgnoreObstaclesClick}
           />
         </RendererContext.Provider>
       </div>

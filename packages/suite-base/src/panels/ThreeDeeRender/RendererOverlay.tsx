@@ -1162,14 +1162,41 @@ export function RendererOverlay(props: Props): React.JSX.Element {
           </Button>
         </div>
       )}
-      {props.showIgnoreObstaclesButton && (
+      {props.interfaceMode === "3d" && props.showIgnoreObstaclesButton && (
         <Button
           variant="contained"
-          color="warning"
           style={{ position: "absolute", top: 10, left: 10 }}
           onClick={props.onIgnoreObstaclesClick}
+          sx={{
+            color: props.parkingSlotSelectionActive ? "success.main" : "inherit", // Change color when active
+            border: "1px solid",
+            borderColor: (theme) =>
+              props.parkingSlotSelectionActive
+                ? theme.palette.success.main
+                : theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.23)"
+                  : "rgba(0,0,0,0.23)",
+            boxShadow: (theme) => theme.shadows[1],
+            backgroundColor: (theme) =>
+              props.parkingSlotSelectionActive
+                ? tc(theme.palette.success.main).setAlpha(0.1).toString()
+                : "transparent",
+            "&:hover": {
+              backgroundColor: (theme) =>
+                props.parkingSlotSelectionActive
+                  ? tc(theme.palette.success.main).setAlpha(0.2).toString()
+                  : "rgba(255,255,255,0.08)",
+              boxShadow: (theme) => theme.shadows[4],
+              borderColor: "currentColor",
+            },
+            "&:active": {
+              backgroundColor: (theme) => tc(theme.palette.secondary.dark).setAlpha(0.5).toString(),
+              transform: "scale(0.98)",
+              boxShadow: theme.shadows[2],
+            },
+          }}
         >
-          忽略障碍物
+          恢复泊车
         </Button>
       )}
       {props.interfaceMode === "image" && <PanelContextMenu getItems={getContextMenuItems} />}
