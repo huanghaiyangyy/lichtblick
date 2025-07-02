@@ -409,6 +409,24 @@ export function RendererOverlay(props: Props): React.JSX.Element {
   const open2 = Boolean(anchorEl2);
 
   const [displayText2, setDisplayText2] = useState(true);
+  // const [isTextExpanded, setIsTextExpanded] = useState(true);
+
+  // 从 planning_debug 消息中提取档位信息
+  const gearChangeInfo = useMemo(() => {
+    if (!props.receivedPlanMessage) {
+      return null;
+    }
+    try {
+      const msg = (props.receivedPlanMessage as any)?.message ?? props.receivedPlanMessage;
+      if (msg.total_gear_stroke> 1){
+        return `第${msg.current_gear_stroke} / ${msg.total_gear_stroke} 步`;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      return null;
+    }
+  }, [props.receivedPlanMessage]);
 
   //消息解析
   const planMessageContent = useMemo(() => {
@@ -695,6 +713,29 @@ export function RendererOverlay(props: Props): React.JSX.Element {
 
   return (
     <>
+      {props.interfaceMode === "3d" && (
+      <div
+        style={{
+          position: "absolute",
+          top: "5%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          backgroundColor: "rgba(0, 0, 0, 0.5)", // 半透明背景
+          color: "white",
+          padding: "8px 16px",
+          borderRadius: "4px",
+          cursor: "pointer",
+          zIndex: 1000,
+          opacity:  1 ,
+          visibility: "visible",
+          transition: "opacity 0.3s ease, visibility 0.3s ease",
+          fontSize: "24px",
+        }}
+        // onClick={() => setIsTextExpanded(!isTextExpanded)}
+      >
+        {gearChangeInfo ? `${gearChangeInfo}` : ""}
+      </div>)
+      }
       {/* 控制状态面板 */}
       {props.interfaceMode === "3d" && (
         <div style={{ position: "absolute", bottom: 20, left: 20, zIndex: 1000 }}>

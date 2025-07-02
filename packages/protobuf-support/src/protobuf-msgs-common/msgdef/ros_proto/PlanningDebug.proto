@@ -64,6 +64,15 @@ message PlanningDebug {
   optional int32 total_gear_stroke = 25;
   optional int32 current_gear_stroke = 26;
 
-  optional bool need_ignore_obstacles = 27;
 
+  optional float end_point_x = 27;           //混合A*的end point
+  optional float end_point_y = 28;
+  optional float end_point_yaw = 29;
+  optional float end_point_kappa = 30;
+  optional float start_point_x = 31;  //混合A*的start point
+  optional float start_point_y = 32;
+  optional float start_point_yaw = 33;
+  optional float start_point_kappa = 34;
+  optional bool is_reversed = 35;
+  optional bool need_ignore_obstacles = 36;
 }
