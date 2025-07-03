@@ -34,6 +34,7 @@ import {
   SceneExtensionConfig,
 } from "@lichtblick/suite-base/panels/ThreeDeeRender/SceneExtensionConfig";
 import ThemeProvider from "@lichtblick/suite-base/theme/ThemeProvider";
+import { DraggableParkingSlot } from "./renderables/parkingSlots/DraggableParkingSlot";
 
 import type {
   FollowMode,
@@ -62,6 +63,7 @@ import {
   makePoseEstimateMessage,
   makePoseMessage,
   makeFoxglovePoseMessage,
+  makeFoxglovePosesInFrame,
   pointTransform,
   poseTransform,
 } from "./publish";
@@ -71,7 +73,16 @@ import { DEFAULT_PUBLISH_SETTINGS } from "./renderables/PublishSettings";
 import { InterfaceMode } from "./types";
 import { TopicAdvertisementManager } from "@lichtblick/suite-base/panels/ThreeDeeRender/TopicAdvertisementManager";
 import { ParkingSlots } from "@lichtblick/suite-base/panels/ThreeDeeRender/renderables/parkingSlots/ParkingSlots";
-import { makePose } from "@lichtblick/suite-base/panels/ThreeDeeRender/transforms";
+import { xyzqMakePose, makePose } from "@lichtblick/suite-base/panels/ThreeDeeRender/transforms";
+
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+} from "@mui/material";
 
 const log = Logger.getLogger(__filename);
 
@@ -87,6 +98,8 @@ const SCHEMA_MAP = {
     "/selected_parking_slot": "geometry_msgs/PoseStamped",
     "/ignore_obstacles": "std_msgs/Int32",
     "/manual_control": "std_msgs/String",
+    "/sim_obstacle_points": "geometry_msgs/PoseArray",
+    "/sim_clear_obstacles": "std_msgs/Int32",
   },
   ros2: {
     clicked_point: "geometry_msgs/msg/PointStamped",
@@ -99,6 +112,8 @@ const SCHEMA_MAP = {
     "/selected_parking_slot": "geometry_msgs/msg/PoseStamped",
     "/ignore_obstacles": "std_msgs/msg/Int32",
     "/manual_control": "std_msgs/msg/String",
+    "/sim_obstacle_points": "geometry_msgs/msg/PoseArray",
+    "/sim_clear_obstacles": "std_msgs/msg/Int32",
   },
   protobuf: {
     clicked_point: "foxglove.PoseInFrame",
@@ -111,6 +126,8 @@ const SCHEMA_MAP = {
     "/selected_parking_slot": "foxglove.PoseInFrame",
     "/ignore_obstacles": "apa.std_msgs.Int32",
     "/manual_control": "apa.std_msgs.String",
+    "/sim_obstacle_points": "foxglove.PosesInFrame",
+    "/sim_clear_obstacles": "apa.std_msgs.Int32",
   },
   default: {
     clicked_point: "geometry_msgs/PointStamped",
@@ -123,6 +140,8 @@ const SCHEMA_MAP = {
     "/selected_parking_slot": "geometry_msgs/PoseStamped",
     "/ignore_obstacles": "std_msgs/Int32",
     "/manual_control": "std_msgs/String",
+    "/sim_obstacle_points": "foxglove.PosesInFrame",
+    "/sim_clear_obstacles": "apa.std_msgs.Int32",
   },
 };
 
@@ -661,6 +680,8 @@ export function ThreeDeeRender(props: {
   }, [renderer, currentTime, allFrames]);
 
   const [showIgnoreObstaclesButton, setShowIgnoreObstaclesButton] = useState(false);
+  const [obstacleCreationActive, setObstacleCreationActive] = useState(false);
+  const [currentObstacleId, setCurrentObstacleId] = useState<string | null>(null);
   // 添加消息接收状态
   const [receivedControlMessage, setreceivedControlMessage] = useState<unknown>();
   const [receivedPlanMessage, setReceivedPlanMessage] = useState<unknown>();
@@ -811,6 +832,9 @@ export function ThreeDeeRender(props: {
   }, [measureActive, renderer]);
 
   const [publishActive, setPublishActive] = useState(false);
+  const [showSizeDialog, setShowSizeDialog] = useState(false);
+  const [obstacleSize, setObstacleSize] = useState({ length: 1.0, width: 0.5 });
+
   useEffect(() => {
     if (renderer?.publishClickTool.publishClickType !== config.publish.type) {
       renderer?.publishClickTool.setPublishClickType(config.publish.type);
@@ -881,6 +905,23 @@ export function ThreeDeeRender(props: {
       SCHEMA_MAP[schemaKey]["/ignore_obstacles"],
       { datatypes },
     );
+    topicManager.advertise(
+      context,
+      "/sim_obstacle_points",
+      SCHEMA_MAP[schemaKey]["/sim_obstacle_points"],
+      {
+        datatypes,
+      },
+    );
+    topicManager.advertise(
+      context,
+      "/sim_clear_obstacles",
+      SCHEMA_MAP[schemaKey]["/sim_clear_obstacles"],
+      {
+        datatypes,
+      },
+    );
+
     return () => {
       topicManager.unadvertise(context, publishTopics.goal);
       topicManager.unadvertise(context, publishTopics.point);
@@ -891,6 +932,8 @@ export function ThreeDeeRender(props: {
       topicManager.unadvertise(context, "/parking_head_in");
       topicManager.unadvertise(context, "/record_trace");
       topicManager.unadvertise(context, "/ignore_obstacles");
+      topicManager.unadvertise(context, "/sim_obstacle_points");
+      topicManager.unadvertise(context, "/sim_clear_obstacles");
     };
   }, [publishTopics, context, context.dataSourceProfile]);
 
@@ -1253,6 +1296,106 @@ export function ThreeDeeRender(props: {
     context.publish("/ignore_obstacles", message);
   }, [context]);
 
+  const onClickAddObstacle = useCallback(() => {
+    if (!context.publish) return;
+    setShowSizeDialog(true);
+  }, [context]);
+
+  const handleObstacleConfirm = useCallback(() => {
+    const tempId = `obstacle-${Date.now()}`;
+    const parkingExtension = Array.from(renderer?.sceneExtensions.values() || []).find(
+      (ext) => ext.extensionId === "foxglove.ParkingSlots",
+    ) as ParkingSlots | undefined;
+
+    parkingExtension?.createTemporarySlot(
+      tempId,
+      {
+        onCancel: () => parkingExtension.removeParkingSlot(tempId),
+        onConfirm: (position, rotation) => {
+          try {
+            const renderFrameId = renderer?.renderFrameId;
+            const publishFrameId = renderer?.publishFrameId ?? renderFrameId;
+
+            if (!publishFrameId) {
+              log.error("No publish frame ID available");
+              setObstacleCreationActive(false);
+              return;
+            }
+
+            const slotInstance = parkingExtension?.getSlotInstance?.(tempId) as unknown as
+              | DraggableParkingSlot
+              | undefined;
+            if (!slotInstance) return;
+
+            const corners = slotInstance.getCornerPoints();
+
+            // 获取当前时间戳
+            const currentTime = renderer?.currentTime ?? 0n;
+            const timestamp = {
+              sec: Number(currentTime / 1_000_000_000n),
+              nsec: Number(currentTime % 1_000_000_000n),
+            };
+
+            const message = {
+              timestamp: {
+                sec: Number(currentTime / 1_000_000_000n),
+                nsec: Number(currentTime % 1_000_000_000n),
+              },
+              frame_id: publishFrameId,
+              poses: corners
+                .map((point: THREE.Vector3) => xyzqMakePose(point.x, point.y, point.z, rotation))
+                .map((pose: { position: any; orientation: any }) => ({
+                  position: {
+                    x: pose.position.x,
+                    y: pose.position.y,
+                    z: pose.position.z,
+                  },
+                  orientation: pose.orientation,
+                })),
+            };
+
+            const transformedMessage = makeFoxglovePosesInFrame({
+              timestamp: message.timestamp,
+              frame_id: message.frame_id,
+              // 为pose参数添加类型注解
+              poses: message.poses.map((pose: { position: any; orientation: any }) => ({
+                position: pose.position,
+                orientation: pose.orientation,
+              })),
+            });
+            // console.log(
+            //   "[障碍物坐标]",
+            //   message.poses.map((p) => `(${p.position.x.toFixed(2)}, ${p.position.y.toFixed(2)})`),
+            // );
+            context.publish!("/sim_obstacle_points", transformedMessage);
+          } catch (error) {
+            log.error("Failed to publish obstacle points:", error);
+            parkingExtension.removeParkingSlot(tempId);
+          } finally {
+            setObstacleCreationActive(false);
+            parkingExtension.removeParkingSlot(tempId);
+          }
+        },
+      },
+      {
+        initialLength: obstacleSize.length,
+        initialWidth: obstacleSize.width,
+        label: "自定义障碍物", // 包含"障碍物"关键词
+      },
+    );
+    setShowSizeDialog(false);
+  }, [renderer, obstacleSize, context]);
+
+  // 清除障碍物回调
+  const onClickClearObstacles = useCallback(() => {
+    if (!context.publish) {
+      log.error("Data source does not support publishing");
+      return;
+    }
+    const message = { data: 1 };
+    context.publish("/sim_clear_obstacles", message);
+  }, [context]);
+
   const [parkingSlotSelectionActive, setParkingSlotSelectionActive] = useState(false);
 
   const onClickSelectParkingSlot = useCallback(() => {
@@ -1436,27 +1579,7 @@ export function ThreeDeeRender(props: {
     // },
     // [onTogglePerspective],
     (event: React.KeyboardEvent) => {
-        if(event.key === "ArrowUp") {
-          event.stopPropagation();
-          event.preventDefault();
-          if (!context.publish) {
-            log.error("Data source does not support publishing");
-            return;
-          }
-          if (
-            context.dataSourceProfile !== "ros1" &&
-            context.dataSourceProfile !== "ros2" &&
-            context.dataSourceProfile !== "protobuf"
-          ) {
-            log.warn("Publishing is only supported in ros1, ros2 and protobuf");
-            return;
-          }
-          const message = {
-            data: "Accelerate",
-          };
-          context.publish("/manual_control", message);
-      }
-      if(event.key === "ArrowDown") {
+      if (event.key === "ArrowUp") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1464,9 +1587,29 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
+        ) {
+          log.warn("Publishing is only supported in ros1, ros2 and protobuf");
+          return;
+        }
+        const message = {
+          data: "Accelerate",
+        };
+        context.publish("/manual_control", message);
+      }
+      if (event.key === "ArrowDown") {
+        event.stopPropagation();
+        event.preventDefault();
+        if (!context.publish) {
+          log.error("Data source does not support publishing");
+          return;
+        }
+        if (
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1476,7 +1619,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === "ArrowLeft") {
+      if (event.key === "ArrowLeft") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1484,9 +1627,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1496,7 +1639,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === "ArrowRight") {
+      if (event.key === "ArrowRight") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1504,9 +1647,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1516,7 +1659,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === "ArrowRight") {
+      if (event.key === "ArrowRight") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1524,9 +1667,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1536,7 +1679,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === "D" || event.key === "d") {
+      if (event.key === "D" || event.key === "d") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1544,9 +1687,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1556,7 +1699,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === "R" || event.key === "r") {
+      if (event.key === "R" || event.key === "r") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1564,9 +1707,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1576,7 +1719,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === "A" || event.key === "a") {
+      if (event.key === "A" || event.key === "a") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1584,9 +1727,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1596,7 +1739,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === "M" || event.key === "m") {
+      if (event.key === "M" || event.key === "m") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1604,9 +1747,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1616,7 +1759,7 @@ export function ThreeDeeRender(props: {
         };
         context.publish("/manual_control", message);
       }
-      if(event.key === " ") {
+      if (event.key === " ") {
         event.stopPropagation();
         event.preventDefault();
         if (!context.publish) {
@@ -1624,9 +1767,9 @@ export function ThreeDeeRender(props: {
           return;
         }
         if (
-          context.dataSourceProfile!== "ros1" &&
-          context.dataSourceProfile!== "ros2" &&
-          context.dataSourceProfile!== "protobuf"
+          context.dataSourceProfile !== "ros1" &&
+          context.dataSourceProfile !== "ros2" &&
+          context.dataSourceProfile !== "protobuf"
         ) {
           log.warn("Publishing is only supported in ros1, ros2 and protobuf");
           return;
@@ -1659,6 +1802,31 @@ export function ThreeDeeRender(props: {
             ...((measureActive || publishActive) && { cursor: "crosshair" }),
           }}
         />
+        {showSizeDialog && (
+          <Dialog open onClose={() => setShowSizeDialog(false)}>
+            <DialogTitle>障碍物尺寸</DialogTitle>
+            <DialogContent>
+              <TextField
+                label="长度 (米)"
+                type="number"
+                value={obstacleSize.length}
+                onChange={(e) => setObstacleSize((p) => ({ ...p, length: +e.target.value }))}
+                fullWidth
+              />
+              <TextField
+                label="宽度 (米)"
+                type="number"
+                value={obstacleSize.width}
+                onChange={(e) => setObstacleSize((p) => ({ ...p, width: +e.target.value }))}
+                fullWidth
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowSizeDialog(false)}>取消</Button>
+              <Button onClick={handleObstacleConfirm}>确认</Button>
+            </DialogActions>
+          </Dialog>
+        )}
         <RendererContext.Provider value={renderer}>
           <RendererOverlay
             interfaceMode={interfaceMode}
@@ -1702,6 +1870,9 @@ export function ThreeDeeRender(props: {
             parkingSlotSelectionActive={parkingSlotSelectionActive}
             showIgnoreObstaclesButton={showIgnoreObstaclesButton}
             onIgnoreObstaclesClick={onIgnoreObstaclesClick}
+            onClickAddObstacle={onClickAddObstacle}
+            onClickClearObstacles={onClickClearObstacles}
+            obstacleCreationActive={obstacleCreationActive}
           />
         </RendererContext.Provider>
       </div>

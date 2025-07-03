@@ -28,6 +28,17 @@ export type Pose = {
 export function makePose(): Pose {
   return { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } };
 }
+export function xyzqMakePose(x: number, y: number, z: number, rotation: number): Pose {
+  return {
+    position: { x, y, z },
+    orientation: {
+      x: 0,
+      y: 0,
+      z: Math.sin(rotation / 2),
+      w: Math.cos(rotation / 2),
+    },
+  };
+}
 
 export function xyzrpyToPose(xyz: vec3, rpy: vec3): Pose {
   const o = quat.fromEuler([0, 0, 0, 1], rpy[0], rpy[1], rpy[2]);

@@ -15,7 +15,7 @@ import { DraggableParkingSlot } from "./DraggableParkingSlot";
 import { CustomLayerSettings } from "../../settings";
 import { makePose, xyzrpyToPose } from "@lichtblick/suite-base/panels/ThreeDeeRender/transforms";
 import ReactPortalService from "../../utils/ReactPortalService";
-import {ParkingSlotConfirmation} from "../../components/ParkingSlotConfirmation";
+import { ParkingSlotConfirmation } from "../../components/ParkingSlotConfirmation";
 
 const log = Logger.getLogger(__filename);
 
@@ -32,7 +32,7 @@ export type LayerSettingsParkingSlot = CustomLayerSettings & {
   color: string;
   position: [number, number, number];
   rotation: [number, number, number];
-}
+};
 
 const DEFAULT_LAYER_SETTINGS: LayerSettingsParkingSlot = {
   visible: true,
@@ -50,7 +50,7 @@ const DEFAULT_LAYER_SETTINGS: LayerSettingsParkingSlot = {
 
 export type ParkingSlotUserData = BaseUserData & {
   settings: LayerSettingsParkingSlot;
-}
+};
 
 export class ParkingSlotRenderable extends Renderable<ParkingSlotUserData> {
   public override dispose(): void {
@@ -68,6 +68,15 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
   public constructor(renderer: IRenderer, name: string = ParkingSlots.extensionId) {
     super(name, renderer);
 
+    renderer.updateConfig((draft) => {
+      // 删除所有停车位图层
+      for (const [slotId, slotConfig] of Object.entries(draft.layers)) {
+        if (slotConfig?.layerId === LAYER_ID) {
+          delete draft.layers[slotId];
+        }
+      }
+    });
+
     // Register our custom action
     renderer.addCustomLayerAction({
       layerId: LAYER_ID,
@@ -80,11 +89,17 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
     this.renderer.on("publishFrameChanged", this.#handlePublishFrameChange);
 
     // Load existing parking slots from the config
-    for (const [slotId, slotConfig] of Object.entries(renderer.config.layers)) {
-      if (slotConfig?.layerId === LAYER_ID) {
-        this.#updateSlot(slotId, slotConfig as Partial<LayerSettingsParkingSlot>);
-      }
-    }
+    // for (const [slotId, slotConfig] of Object.entries(renderer.config.layers)) {
+    //   if (slotConfig?.layerId === LAYER_ID) {
+    //     this.#updateSlot(slotId, slotConfig as Partial<LayerSettingsParkingSlot>);
+    //   }
+    // }
+  }
+
+  public getSlotInstance(slotId: string): DraggableParkingSlot | undefined {
+    const renderable = this.renderables.get(slotId);
+    if (!renderable) return undefined;
+    return this.#getDraggableSlot(renderable);
   }
 
   public override dispose(): void {
@@ -138,9 +153,7 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
           fields,
           visible: config.visible ?? DEFAULT_LAYER_SETTINGS.visible,
           handler: handler,
-          actions: [
-            { id: "delete", type: "action", label: t("threeDee:delete") },
-          ],
+          actions: [{ id: "delete", type: "action", label: t("threeDee:delete") }],
         },
       });
 
@@ -151,7 +164,11 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
     return entries;
   }
 
-  public override startFrame(currentTime: bigint, renderFrameId: string, fixedFrameId: string): void {
+  public override startFrame(
+    currentTime: bigint,
+    renderFrameId: string,
+    fixedFrameId: string,
+  ): void {
     for (const renderable of this.renderables.values()) {
       renderable.userData.frameId = renderable.userData.settings.frameId ?? renderFrameId;
     }
@@ -211,13 +228,14 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
   };
 
   #getCameraTarget(): THREE.Vector3 {
-    if (this.renderer.cameraHandler &&
-        typeof this.renderer.cameraHandler.getOrbitControlsTarget === 'function') {
+    if (
+      this.renderer.cameraHandler &&
+      typeof this.renderer.cameraHandler.getOrbitControlsTarget === "function"
+    ) {
       return this.renderer.cameraHandler.getOrbitControlsTarget();
     }
 
-    if (this.renderer.cameraHandler &&
-        (this.renderer.cameraHandler as any).controls?.target) {
+    if (this.renderer.cameraHandler && (this.renderer.cameraHandler as any).controls?.target) {
       return (this.renderer.cameraHandler as any).controls.target.clone();
     }
 
@@ -226,13 +244,13 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
 
   #handleTransformTreeUpdated = (): void => {
     this.updateSettingsTree();
-  }
+  };
 
   #handlePublishFrameChange = (frameId: string | undefined): void => {
     for (const renderable of this.renderables.values()) {
       renderable.userData.settings.frameId = frameId ?? renderable.userData.settings.frameId;
     }
-  }
+  };
 
   #updateSlot(slotId: string, settings: Partial<LayerSettingsParkingSlot> | undefined): void {
     let renderable = this.renderables.get(slotId);
@@ -247,7 +265,12 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
       return;
     }
 
-    const newSettings = { ...DEFAULT_LAYER_SETTINGS, ...settings };
+    const newSettings = {
+      ...DEFAULT_LAYER_SETTINGS,
+      ...settings,
+      length: settings.length ?? (settings as any).initialLength ?? DEFAULT_PARKING_SLOT_LENGTH,
+      width: settings.width ?? (settings as any).initialWidth ?? DEFAULT_PARKING_SLOT_WIDTH,
+    };
     if (!renderable) {
       renderable = this.#createRenderable(slotId, newSettings);
       renderable.userData.pose = xyzrpyToPose(newSettings.position, newSettings.rotation);
@@ -277,10 +300,12 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
   }
 
   #createRenderable(instanceId: string, settings: LayerSettingsParkingSlot): ParkingSlotRenderable {
+    const isObstacle = settings.label?.includes("障碍物") ?? false;
+
     const position = new THREE.Vector3(
       settings.position[0],
       settings.position[1],
-      settings.position[2]
+      settings.position[2],
     );
 
     const cameraTarget = this.#getCameraTarget();
@@ -299,13 +324,13 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
       this.renderer.fixedFrameId,
       this.renderer.renderFrameId || "",
       currentTime,
-      currentTime
+      currentTime,
     );
 
     const initPosition = new THREE.Vector3(
       cameraTargetPoseInPublishFrame.position.x,
       cameraTargetPoseInPublishFrame.position.y,
-      cameraTargetPoseInPublishFrame.position.z
+      cameraTargetPoseInPublishFrame.position.z,
     );
 
     const draggableSlot = new DraggableParkingSlot(initPosition, {
@@ -316,20 +341,17 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
       color: settings.color,
       initialPosition: position,
       initialRotation: settings.rotation[2], // Use Z rotation
+      isObstacle: settings.label?.includes("障碍物"),
     });
 
-    const renderable = new ParkingSlotRenderable(
-      instanceId,
-      this.renderer,
-      {
-        receiveTime: 0n,
-        messageTime: 0n,
-        frameId: settings.frameId ?? "",
-        pose: makePose(),
-        settingsPath: ["layers", instanceId],
-        settings: settings,
-      }
-    );
+    const renderable = new ParkingSlotRenderable(instanceId, this.renderer, {
+      receiveTime: 0n,
+      messageTime: 0n,
+      frameId: settings.frameId ?? "",
+      pose: makePose(),
+      settingsPath: ["layers", instanceId],
+      settings: settings,
+    });
     renderable.add(draggableSlot);
 
     this.add(renderable);
@@ -346,26 +368,38 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
     return undefined;
   }
 
-  #temporarySlotCallbacks = new Map<string, {
-    onCancel: () => void;
-    onConfirm: (position: THREE.Vector3, rotation: number) => void;
-  }>();
+  #temporarySlotCallbacks = new Map<
+    string,
+    {
+      onCancel: () => void;
+      onConfirm: (position: THREE.Vector3, rotation: number) => void;
+    }
+  >();
 
   public createTemporarySlot(
     slotId: string,
     callbacks: {
       onCancel: () => void;
       onConfirm: (position: THREE.Vector3, rotation: number) => void;
-    }
+    },
+    options?: {
+      initialLength?: number;
+      initialWidth?: number;
+      label?: string;
+    },
   ): void {
+    const cameraTarget = this.#getCameraTarget();
+    const initPosition = new THREE.Vector3(cameraTarget.x, cameraTarget.y, cameraTarget.z);
     this.#temporarySlotCallbacks.set(slotId, callbacks);
 
     const config: LayerSettingsParkingSlot = {
       ...DEFAULT_LAYER_SETTINGS,
       instanceId: slotId,
       visible: true,
-      label: "Select Parking Slot Location",
-      frameId: this.renderer.publishFrameId
+      label: options?.label ?? "Select Parking Slot Location",
+      frameId: this.renderer.publishFrameId,
+      length: options?.initialLength ?? DEFAULT_PARKING_SLOT_LENGTH,
+      width: options?.initialWidth ?? DEFAULT_PARKING_SLOT_WIDTH,
     };
 
     this.renderer.updateConfig((draft) => {
@@ -388,6 +422,13 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
 
     this.updateSettingsTree();
     this.renderer.updateCustomLayersCount();
+    const draggableSlot = new DraggableParkingSlot(initPosition, {
+      id: slotId,
+      renderer: this.renderer,
+      length: options?.initialLength ?? DEFAULT_PARKING_SLOT_LENGTH,
+      width: options?.initialWidth ?? DEFAULT_PARKING_SLOT_WIDTH,
+      initialPosition: initPosition,
+    });
   }
 
   /**
@@ -429,7 +470,7 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
           if (draft.layers[slotId]) {
             draft.layers[slotId] = {
               ...draft.layers[slotId],
-              label: "Selected Parking Slot"
+              label: "Selected Parking Slot",
             };
           }
         });
@@ -470,13 +511,13 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
               }
             }
           }
-        }
-      })
+        },
+      }),
     );
 
     this.#confirmationUI = {
       portalId,
-      cleanup: () => portalService.removePortal(portalId)
+      cleanup: () => portalService.removePortal(portalId),
     };
   }
 
@@ -493,6 +534,6 @@ export class ParkingSlots extends SceneExtension<ParkingSlotRenderable> {
   // Update the type definition
   #confirmationUI: {
     portalId: string;
-    cleanup: () => void
+    cleanup: () => void;
   } | null = null;
 }

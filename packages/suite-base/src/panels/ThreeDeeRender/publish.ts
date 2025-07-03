@@ -100,6 +100,28 @@ export function makeFoxglovePoseMessage(pose: Pose, frameId: string): unknown {
   };
 }
 
+export function makeFoxglovePosesInFrame(message: {
+  timestamp: { sec: number; nsec: number };
+  frame_id: string;
+  poses: Array<{
+    position: { x: number; y: number; z: number };
+    orientation: { x: number; y: number; z: number; w: number };
+  }>;
+}): unknown {
+  return {
+    timestamp: {
+      sec: message.timestamp.sec,
+      nsec: message.timestamp.nsec,
+    },
+    frame_id: message.frame_id,
+    poses: message.poses.map(pose => ({
+      position: pose.position,
+      orientation: pose.orientation
+    }))
+  };
+}
+
+
 export function pointTransform(point: Point, originalFrame: string, targetFrame: string, renderer: IRenderer | undefined): Point {
   let transformedPoint = point;
   if (targetFrame !== originalFrame) {

@@ -238,6 +238,9 @@ type Props = {
 
   showIgnoreObstaclesButton?: boolean;
   onIgnoreObstaclesClick?: () => void;
+  onClickAddObstacle?: () => void;
+  onClickClearObstacles?: () => void;
+  obstacleCreationActive?: boolean;
 };
 
 /**
@@ -418,7 +421,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
     }
     try {
       const msg = (props.receivedPlanMessage as any)?.message ?? props.receivedPlanMessage;
-      if (msg.total_gear_stroke> 1){
+      if (msg.total_gear_stroke > 1) {
         return `第${msg.current_gear_stroke} / ${msg.total_gear_stroke} 步`;
       } else {
         return null;
@@ -714,28 +717,28 @@ export function RendererOverlay(props: Props): React.JSX.Element {
   return (
     <>
       {props.interfaceMode === "3d" && (
-      <div
-        style={{
-          position: "absolute",
-          top: "5%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "rgba(0, 0, 0, 0.5)", // 半透明背景
-          color: "white",
-          padding: "8px 16px",
-          borderRadius: "4px",
-          cursor: "pointer",
-          zIndex: 1000,
-          opacity:  1 ,
-          visibility: "visible",
-          transition: "opacity 0.3s ease, visibility 0.3s ease",
-          fontSize: "24px",
-        }}
-        // onClick={() => setIsTextExpanded(!isTextExpanded)}
-      >
-        {gearChangeInfo ? `${gearChangeInfo}` : ""}
-      </div>)
-      }
+        <div
+          style={{
+            position: "absolute",
+            top: "5%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)", // 半透明背景
+            color: "white",
+            padding: "8px 16px",
+            borderRadius: "4px",
+            cursor: "pointer",
+            zIndex: 1000,
+            opacity: 1,
+            visibility: "visible",
+            transition: "opacity 0.3s ease, visibility 0.3s ease",
+            fontSize: "24px",
+          }}
+          // onClick={() => setIsTextExpanded(!isTextExpanded)}
+        >
+          {gearChangeInfo ? `${gearChangeInfo}` : ""}
+        </div>
+      )}
       {/* 控制状态面板 */}
       {props.interfaceMode === "3d" && (
         <div style={{ position: "absolute", bottom: 20, left: 20, zIndex: 1000 }}>
@@ -811,7 +814,6 @@ export function RendererOverlay(props: Props): React.JSX.Element {
           </div>
         </div>
       )}
-
       {props.interfaceMode === "3d" && (
         <div
           style={{
@@ -1206,7 +1208,7 @@ export function RendererOverlay(props: Props): React.JSX.Element {
       {props.interfaceMode === "3d" && props.showIgnoreObstaclesButton && (
         <Button
           variant="contained"
-          style={{ position: "absolute", top: 10, left: 10 }}
+          style={{ position: "absolute", top: 60, left: 10 }}
           onClick={props.onIgnoreObstaclesClick}
           sx={{
             color: props.parkingSlotSelectionActive ? "success.main" : "inherit", // Change color when active
@@ -1238,6 +1240,84 @@ export function RendererOverlay(props: Props): React.JSX.Element {
           }}
         >
           恢复泊车
+        </Button>
+      )}
+      {props.interfaceMode === "3d" && props.onClickAddObstacle && (
+        <div>
+          <Button
+            variant="contained"
+            style={{ position: "absolute", top: 10, left: 10 }}
+            onClick={props.onClickAddObstacle}
+            sx={{
+              color: props.parkingSlotSelectionActive ? "success.main" : "inherit", // Change color when active
+              border: "1px solid",
+              borderColor: (theme) =>
+                props.parkingSlotSelectionActive
+                  ? theme.palette.success.main
+                  : theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.23)"
+                    : "rgba(0,0,0,0.23)",
+              boxShadow: (theme) => theme.shadows[1],
+              backgroundColor: (theme) =>
+                props.parkingSlotSelectionActive
+                  ? tc(theme.palette.success.main).setAlpha(0.1).toString()
+                  : "transparent",
+              "&:hover": {
+                backgroundColor: (theme) =>
+                  props.parkingSlotSelectionActive
+                    ? tc(theme.palette.success.main).setAlpha(0.2).toString()
+                    : "rgba(255,255,255,0.08)",
+                boxShadow: (theme) => theme.shadows[4],
+                borderColor: "currentColor",
+              },
+              "&:active": {
+                backgroundColor: (theme) =>
+                  tc(theme.palette.secondary.dark).setAlpha(0.5).toString(),
+                transform: "scale(0.98)",
+                boxShadow: theme.shadows[2],
+              },
+            }}
+          >
+            {t(props.obstacleCreationActive ? ("绘制中..." as any) : ("添加障碍物" as any))}
+          </Button>
+        </div>
+      )}
+      // 在清除按钮区域添加
+      {props.interfaceMode === "3d" && props.onClickClearObstacles && (
+        <Button
+          variant="contained"
+          style={{ position: "absolute", top: 10, left: 110 }}
+          onClick={props.onClickClearObstacles}
+          sx={{
+            color: props.parkingSlotSelectionActive ? "success.main" : "inherit", // Change color when active
+            border: "1px solid",
+            borderColor: (theme) =>
+              props.parkingSlotSelectionActive
+                ? theme.palette.success.main
+                : theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.23)"
+                  : "rgba(0,0,0,0.23)",
+            boxShadow: (theme) => theme.shadows[1],
+            backgroundColor: (theme) =>
+              props.parkingSlotSelectionActive
+                ? tc(theme.palette.success.main).setAlpha(0.1).toString()
+                : "transparent",
+            "&:hover": {
+              backgroundColor: (theme) =>
+                props.parkingSlotSelectionActive
+                  ? tc(theme.palette.success.main).setAlpha(0.2).toString()
+                  : "rgba(255,255,255,0.08)",
+              boxShadow: (theme) => theme.shadows[4],
+              borderColor: "currentColor",
+            },
+            "&:active": {
+              backgroundColor: (theme) => tc(theme.palette.secondary.dark).setAlpha(0.5).toString(),
+              transform: "scale(0.98)",
+              boxShadow: theme.shadows[2],
+            },
+          }}
+        >
+          清除障碍物
         </Button>
       )}
       {props.interfaceMode === "image" && <PanelContextMenu getItems={getContextMenuItems} />}

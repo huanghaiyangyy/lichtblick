@@ -24,13 +24,14 @@ export type DraggableParkingSlotOptions = {
   color?: string;
   initialPosition: THREE.Vector3;
   initialRotation?: number;
+  isObstacle?: boolean;
 };
 
 export class DraggableParkingSlot extends Renderable {
   #length: number;
   #width: number;
   #rectangle: THREE.Mesh;
-  #carLayer: THREE.Mesh;
+  #carLayer?: THREE.Mesh;
   #outline: LineSegments2;
   #color: string;
   #rotationHandle: THREE.Mesh;
@@ -38,11 +39,19 @@ export class DraggableParkingSlot extends Renderable {
   #mouseMoveHandler: (event: MouseEvent) => void = () => {};
   #mouseUpHandler: () => void = () => {};
   #raycaster = new THREE.Raycaster();
-  #dragControls = new DragControls([], new THREE.PerspectiveCamera(), document.createElement("canvas"));
+  #dragControls = new DragControls(
+    [],
+    new THREE.PerspectiveCamera(),
+    document.createElement("canvas"),
+  );
   #draggableObjects: THREE.Object3D[] = [];
   #startRotation = 0;
   #startAngle = 0;
-  #rotationControls = new DragControls([], new THREE.PerspectiveCamera(), document.createElement("canvas"));
+  #rotationControls = new DragControls(
+    [],
+    new THREE.PerspectiveCamera(),
+    document.createElement("canvas"),
+  );
   #slotCenter = new THREE.Vector3();
   #enableDragging = true;
 
@@ -78,23 +87,26 @@ export class DraggableParkingSlot extends Renderable {
     this.#rectangle.position.copy(initPosition);
     this.#slotCenter.copy(this.#rectangle.position);
 
-    // Create the car layer mesh (optional, can be used for visualizing the car)
-    const carGeometry = new THREE.PlaneGeometry(4.6, 2.174);  // Dimensions of ID.4 in meters
-    const carTexture = new THREE.TextureLoader().load("./texture/topview.png");
-    const carMaterial = new THREE.MeshBasicMaterial({
-      map: carTexture,
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    this.#carLayer = new THREE.Mesh(carGeometry, carMaterial);
-    this.#carLayer.position.copy(this.#rectangle.position);
-    this.#carLayer.position.z = 0.01; // Position slightly above the rectangle
-    this.#carLayer.rotation.x = 0;
-    this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Rotate to face the rectangle
-
+    if (!options.isObstacle) {
+      // Create the car layer mesh (optional, can be used for visualizing the car)
+      const carGeometry = new THREE.PlaneGeometry(4.6, 2.174); // Dimensions of ID.4 in meters
+      const carTexture = new THREE.TextureLoader().load("./texture/topview.png");
+      const carMaterial = new THREE.MeshBasicMaterial({
+        map: carTexture,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      this.#carLayer = new THREE.Mesh(carGeometry, carMaterial);
+      this.#carLayer.position.copy(this.#rectangle.position);
+      this.#carLayer.position.z = 0.01; // Position slightly above the rectangle
+      this.#carLayer.rotation.x = 0;
+      this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Rotate to face the rectangle
+    } else {
+      this.#carLayer = undefined; // 明确设置为undefined
+    }
     // Create the outline
     const edgesGeometry = new THREE.EdgesGeometry(rectangleGeometry);
     const outlineGeometry = new LineSegmentsGeometry().fromEdgesGeometry(edgesGeometry);
@@ -123,6 +135,7 @@ export class DraggableParkingSlot extends Renderable {
     this.updateHandlePosition();
 
     // Create the switch button (optional, can be used for toggling slot state)
+    // if (!options.isObstacle) {
     const switchGeometry = new THREE.CircleGeometry(HANDLE_SIZE, 16, 16);
     const switchTexture = new THREE.TextureLoader().load("./texture/switch.webp");
     const switchMaterial = new THREE.MeshBasicMaterial({
@@ -134,6 +147,7 @@ export class DraggableParkingSlot extends Renderable {
     });
     this.#switchButton = new THREE.Mesh(switchGeometry, switchMaterial);
     this.updateSwitchPosition();
+    // }
 
     if (options.initialRotation) {
       this.#rectangle.rotation.z = options.initialRotation;
@@ -143,7 +157,7 @@ export class DraggableParkingSlot extends Renderable {
     }
 
     this.add(this.#rectangle);
-    this.add(this.#carLayer);
+    this.#carLayer && this.add(this.#carLayer);
     this.add(this.#outline);
     this.add(this.#rotationHandle);
     this.add(this.#switchButton);
@@ -168,9 +182,10 @@ export class DraggableParkingSlot extends Renderable {
 
     this.#rectangle.geometry.dispose();
     (this.#rectangle.material as THREE.Material).dispose();
-
-    this.#carLayer.geometry.dispose();
-    (this.#carLayer.material as THREE.Material).dispose();
+    if (this.#carLayer) {
+      this.#carLayer?.geometry.dispose();
+      (this.#carLayer?.material as THREE.Material).dispose();
+    }
 
     this.#outline.geometry.dispose();
     (this.#outline.material as THREE.Material).dispose();
@@ -199,7 +214,9 @@ export class DraggableParkingSlot extends Renderable {
         side: THREE.DoubleSide,
         depthWrite: false,
       });
-      this.#carLayer.visible = false;
+      if (this.#carLayer) {
+        this.#carLayer.visible = false;
+      }
       this.#switchButton.visible = false;
     } else {
       const handleTexture = new THREE.TextureLoader().load("./texture/rotation1.png");
@@ -210,7 +227,9 @@ export class DraggableParkingSlot extends Renderable {
         side: THREE.DoubleSide,
         depthWrite: false,
       });
-      this.#carLayer.visible = true;
+      if (this.#carLayer) {
+        this.#carLayer.visible = true;
+      }
       this.#switchButton.visible = true;
     }
   }
@@ -234,12 +253,8 @@ export class DraggableParkingSlot extends Renderable {
   }
 
   public setColor(colorStr: string): void {
-    const rgba = stringToRgba({r: 0, g: 0, b:0, a:1}, colorStr);
-    (this.#rectangle.material as THREE.MeshBasicMaterial).color.setRGB(
-      rgba.r,
-      rgba.g,
-      rgba.b
-    );
+    const rgba = stringToRgba({ r: 0, g: 0, b: 0, a: 1 }, colorStr);
+    (this.#rectangle.material as THREE.MeshBasicMaterial).color.setRGB(rgba.r, rgba.g, rgba.b);
     (this.#rectangle.material as THREE.MeshBasicMaterial).opacity = rgba.a;
   }
 
@@ -266,11 +281,11 @@ export class DraggableParkingSlot extends Renderable {
 
   private updateHandlePosition(): void {
     // Position the handle at the front edge of the rectangle
-    const handleOffset = (this.#length / 2) + HANDLE_DISTANCE;
+    const handleOffset = this.#length / 2 + HANDLE_DISTANCE;
     this.#rotationHandle.position.set(
       this.#slotCenter.x + handleOffset * Math.cos(this.#rectangle.rotation.z),
       this.#slotCenter.y + handleOffset * Math.sin(this.#rectangle.rotation.z),
-      this.#rectangle.position.z
+      this.#rectangle.position.z,
     );
 
     this.#rotationHandle.rotation.z = this.#rectangle.rotation.z - Math.PI / 2; // Handle points outward
@@ -281,9 +296,8 @@ export class DraggableParkingSlot extends Renderable {
     this.#switchButton.position.set(
       this.#slotCenter.x,
       this.#slotCenter.y,
-      this.#rectangle.position.z + 0.02 // Slightly above the rectangle
-    )
-
+      this.#rectangle.position.z + 0.02, // Slightly above the rectangle
+    );
 
     // Keep the switch button's orientation consistent
     this.#switchButton.rotation.z = this.#rectangle.rotation.z;
@@ -309,8 +323,9 @@ export class DraggableParkingSlot extends Renderable {
       // Rotate by Math.PI (180 degrees)
       this.#rectangle.rotation.z += Math.PI;
       this.#outline.rotation.z += Math.PI;
-      this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Maintain car orientation
-
+      if (this.#carLayer) {
+        this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Maintain car orientation
+      }
       // Update positions of handles
       this.updateHandlePosition();
       this.updateSwitchPosition();
@@ -345,8 +360,9 @@ export class DraggableParkingSlot extends Renderable {
       // Rotate by Math.PI (180 degrees)
       this.#rectangle.rotation.z += Math.PI;
       this.#outline.rotation.z += Math.PI;
-      this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Maintain car orientation
-
+      if (this.#carLayer) {
+        this.#carLayer.rotation.z = this.#rectangle.rotation.z + Math.PI; // Maintain car orientation
+      }
       // Update positions of handles
       this.updateHandlePosition();
       this.updateSwitchPosition();
@@ -360,7 +376,7 @@ export class DraggableParkingSlot extends Renderable {
     this.#dragControls = new DragControls(
       this.#draggableObjects,
       this.renderer.cameraHandler.getActiveCamera(),
-      this.renderer.gl.domElement
+      this.renderer.gl.domElement,
     );
 
     if (!this.#enableDragging) {
@@ -371,10 +387,12 @@ export class DraggableParkingSlot extends Renderable {
     this.#dragControls.transformGroup = false;
 
     // DragControls events
-    this.#dragControls.addEventListener('dragstart', () => {
+    this.#dragControls.addEventListener("dragstart", () => {
       // Disable orbit controls through the renderer
-      if (this.renderer.cameraHandler &&
-          typeof this.renderer.cameraHandler.setOrbitControlsEnabled === 'function') {
+      if (
+        this.renderer.cameraHandler &&
+        typeof this.renderer.cameraHandler.setOrbitControlsEnabled === "function"
+      ) {
         this.renderer.cameraHandler.setOrbitControlsEnabled(false);
       }
       // Check if we're trying to drag the handle - if so, don't use DragControls
@@ -399,11 +417,13 @@ export class DraggableParkingSlot extends Renderable {
       }
     });
 
-    this.#dragControls.addEventListener('drag', (event) => {
+    this.#dragControls.addEventListener("drag", (event) => {
       this.#outline.position.copy(this.#rectangle.position);
       this.#slotCenter.copy(this.#rectangle.position);
-      this.#carLayer.position.copy(this.#rectangle.position);
-      this.#carLayer.position.z = 0.01;
+      if (this.#carLayer) {
+        this.#carLayer.position.copy(this.#rectangle.position);
+        this.#carLayer.position.z = 0.01;
+      }
 
       event.object.position.z = 0;
       this.#outline.position.z = 0;
@@ -414,9 +434,11 @@ export class DraggableParkingSlot extends Renderable {
       this.renderer.queueAnimationFrame();
     });
 
-    this.#dragControls.addEventListener('dragend', () => {
-      if (this.renderer.cameraHandler &&
-          typeof this.renderer.cameraHandler.setOrbitControlsEnabled === 'function') {
+    this.#dragControls.addEventListener("dragend", () => {
+      if (
+        this.renderer.cameraHandler &&
+        typeof this.renderer.cameraHandler.setOrbitControlsEnabled === "function"
+      ) {
         this.renderer.cameraHandler.setOrbitControlsEnabled(true);
       }
       // Re-enable the controls (might have been disabled in dragstart)
@@ -431,7 +453,7 @@ export class DraggableParkingSlot extends Renderable {
     this.#rotationControls = new DragControls(
       [this.#rotationHandle],
       this.renderer.cameraHandler.getActiveCamera(),
-      this.renderer.gl.domElement
+      this.renderer.gl.domElement,
     );
 
     if (!this.#enableDragging) {
@@ -439,24 +461,26 @@ export class DraggableParkingSlot extends Renderable {
     }
 
     // Disable regular dragging for the handle
-    this.#rotationControls.addEventListener('dragstart', () => {
-      if (this.renderer.cameraHandler &&
-          typeof this.renderer.cameraHandler.setOrbitControlsEnabled === 'function') {
+    this.#rotationControls.addEventListener("dragstart", () => {
+      if (
+        this.renderer.cameraHandler &&
+        typeof this.renderer.cameraHandler.setOrbitControlsEnabled === "function"
+      ) {
         this.renderer.cameraHandler.setOrbitControlsEnabled(false);
       }
       this.#startRotation = this.#rectangle.rotation.z;
 
       const centerToHandle = new THREE.Vector2(
         this.#rotationHandle.position.x - this.#slotCenter.x,
-        this.#rotationHandle.position.y - this.#slotCenter.y
+        this.#rotationHandle.position.y - this.#slotCenter.y,
       );
       this.#startAngle = Math.atan2(centerToHandle.y, centerToHandle.x);
     });
 
-    this.#rotationControls.addEventListener('drag', (event) => {
+    this.#rotationControls.addEventListener("drag", (event) => {
       const centerToHandle = new THREE.Vector2(
         event.object.position.x - this.#slotCenter.x,
-        event.object.position.y - this.#slotCenter.y
+        event.object.position.y - this.#slotCenter.y,
       );
 
       const currentAngle = Math.atan2(centerToHandle.y, centerToHandle.x);
@@ -466,11 +490,13 @@ export class DraggableParkingSlot extends Renderable {
       const newRotation = this.#startRotation + angleDelta;
       this.#rectangle.rotation.z = newRotation;
       this.#outline.rotation.z = newRotation;
-      this.#carLayer.rotation.z = newRotation + Math.PI; // Rotate to face the rectangle
+      if (this.#carLayer) {
+        this.#carLayer.rotation.z = newRotation + Math.PI;
+      } // Rotate to face the rectangle
       this.#switchButton.rotation.z = newRotation;
 
       // Keep the handle at fixed distance from center
-      const handleDistance = (this.#length / 2) + HANDLE_DISTANCE;
+      const handleDistance = this.#length / 2 + HANDLE_DISTANCE;
       event.object.position.x = this.#slotCenter.x + handleDistance * Math.cos(newRotation);
       event.object.position.y = this.#slotCenter.y + handleDistance * Math.sin(newRotation);
 
@@ -482,9 +508,11 @@ export class DraggableParkingSlot extends Renderable {
       this.renderer.queueAnimationFrame();
     });
 
-    this.#rotationControls.addEventListener('dragend', () => {
-      if (this.renderer.cameraHandler &&
-          typeof this.renderer.cameraHandler.setOrbitControlsEnabled === 'function') {
+    this.#rotationControls.addEventListener("dragend", () => {
+      if (
+        this.renderer.cameraHandler &&
+        typeof this.renderer.cameraHandler.setOrbitControlsEnabled === "function"
+      ) {
         this.renderer.cameraHandler.setOrbitControlsEnabled(true);
       }
       this.renderer.queueAnimationFrame();
@@ -513,15 +541,38 @@ export class DraggableParkingSlot extends Renderable {
   public getPosition(): THREE.Vector3 {
     const wheelBase = WHEEL_BASE_ID4; // Use the constant for ID.4
     const offset = new THREE.Vector3(wheelBase / 2, 0, 0);
-    const offsetWithRotation = offset.clone().applyAxisAngle(
-      new THREE.Vector3(0, 0, 1),
-      this.#rectangle.rotation.z
-    );
+    const offsetWithRotation = offset
+      .clone()
+      .applyAxisAngle(new THREE.Vector3(0, 0, 1), this.#rectangle.rotation.z);
     const rearCenter = this.#rectangle.position.clone().sub(offsetWithRotation);
     return rearCenter;
   }
 
   public getRotation(): number {
     return this.#rectangle.rotation.z;
+  }
+
+  public getCornerPoints(): THREE.Vector3[] {
+    const matrix = new THREE.Matrix4();
+    this.#rectangle.updateWorldMatrix(true, false);
+    matrix.copy(this.#rectangle.matrixWorld);
+
+    const corners: THREE.Vector3[] = [];
+    // 添加非空断言确保position属性存在
+    const vertices = this.#rectangle.geometry.attributes.position!.array;
+
+    // 遍历平面几何体的四个顶点（PlaneGeometry默认有4个顶点）
+    for (let i = 0; i < vertices.length; i += 3) {
+      const vec = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]).applyMatrix4(
+        matrix,
+      );
+      corners.push(vec);
+    }
+
+    // 返回去重后的四个角点（平面几何体可能有重复顶点）
+    return [...new Set(corners.map((v) => v.toArray().join(",")))].map((s) => {
+      const [x, y, z] = s.split(",").map(Number);
+      return new THREE.Vector3(x, y, z);
+    });
   }
 }
